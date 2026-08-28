@@ -58,20 +58,17 @@ data also removes the stored Studio license token.
 
 ## Configuration
 
-Production uses `https://api.sociobot.in/api/v1` for billing. Staging can override
-the host at build time without changing a product ID:
+Production uses the registered `caption-fix-queue` product at
+`https://api.sociobot.in/api/v1`. Staging can override the host at build time
+without changing a product ID:
 
 ```sh
 VITE_BILLING_API=https://pilot-api.sociobot.in/api/v1 npm run build
 ```
 
-The factory registers the `caption-fix-queue` product separately. Checkout is
-deliberately hidden until that registration is complete; enable the hosted buy
-link only in the registered deployment build:
-
-```sh
-VITE_STUDIO_CHECKOUT_ENABLED=true npm run build
-```
+The hosted buy link is always the Sociobot billing route. A license token is
+never treated as active until its first verification succeeds; a prior verified
+verdict is retained for offline use and rechecked at most once a day.
 
 ## Scope
 

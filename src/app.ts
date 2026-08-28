@@ -1,6 +1,6 @@
 import './styles.css';
 import { runChecks } from './checks';
-import { captureReturnedLicense, cachedUnlock, checkoutUrl, saveLicense, storedLicense, studioCheckoutAvailable, verifyLicense } from './license';
+import { captureReturnedLicense, cachedUnlock, checkoutUrl, saveLicense, storedLicense, verifyLicense } from './license';
 import { formatTimestamp, parseCaptions, serializeCaptions } from './parser';
 import { clearState, loadState, saveState } from './storage';
 import type { CaptionDocument, Finding, FindingKind, FindingStatus, GlossaryEntry, ReviewRecord, SavedState } from './types';
@@ -239,10 +239,7 @@ function finishedState(): string {
 }
 
 function purchaseControls(): string {
-  const checkout = studioCheckoutAvailable()
-    ? `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p>`
-    : '<p class="checkout-unavailable" role="status"><strong>Checkout is not available yet.</strong> Studio purchase will appear here once it is enabled. The free local checker is fully available.</p>';
-  return `${checkout}<hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
+  return `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
 }
 
 function dialogs(): string {

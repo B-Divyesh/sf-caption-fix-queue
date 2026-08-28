@@ -1,4 +1,4 @@
-const VERSION = 'caption-fix-v6';
+const VERSION = 'caption-fix-v7';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const PRECACHE = ['/', '/index.html', '/offline.html', '/privacy/', '/terms/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/art/caption-herbarium.webp'];

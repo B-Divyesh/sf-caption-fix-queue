@@ -1,6 +1,5 @@
 const SLUG = 'caption-fix-queue';
 const API_BASE = import.meta.env.VITE_BILLING_API || 'https://api.sociobot.in/api/v1';
-const CHECKOUT_ENABLED = import.meta.env.VITE_STUDIO_CHECKOUT_ENABLED === 'true';
 const TOKEN_KEY = `sb_license:${SLUG}`;
 const VERDICT_KEY = `sb_license_verdict:${SLUG}`;
 
@@ -10,9 +9,8 @@ export function checkoutUrl(): string {
   return `${API_BASE}/products/${SLUG}/checkout`;
 }
 
-/** Checkout is opt-in at build time after the factory has enabled the product. */
-export function studioCheckoutAvailable(): boolean {
-  return CHECKOUT_ENABLED;
+function clearVerdict(): void {
+  localStorage.removeItem(VERDICT_KEY);
 }
 
 export function captureReturnedLicense(): void {
@@ -20,7 +18,9 @@ export function captureReturnedLicense(): void {
   const token = url.searchParams.get('license');
   if (!token) return;
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: true, checkedAt: 0 }));
+  // A return token is not proof of a purchase. It must be verified before
+  // Studio is enabled, and must not inherit a verdict for an older token.
+  clearVerdict();
   url.searchParams.delete('license');
   history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 }
@@ -31,15 +31,17 @@ export function storedLicense(): string {
 
 export function saveLicense(token: string): void {
   localStorage.setItem(TOKEN_KEY, token.trim());
-  localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: true, checkedAt: 0 }));
+  // Do not grant an optimistic unlock for a token that has never succeeded.
+  // Offline use is supported only after this specific token has been verified.
+  clearVerdict();
 }
 
 export function cachedUnlock(): boolean {
   if (!storedLicense()) return false;
   try {
     const cached = JSON.parse(localStorage.getItem(VERDICT_KEY) ?? '{}') as CachedVerdict;
-    return cached.valid !== false;
-  } catch { return true; }
+    return cached.valid === true && Number.isFinite(cached.checkedAt) && cached.checkedAt > 0;
+  } catch { return false; }
 }
 
 export async function verifyLicense(force = false): Promise<{ valid: boolean; reason?: string }> {

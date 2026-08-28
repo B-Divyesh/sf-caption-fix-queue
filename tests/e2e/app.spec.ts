@@ -35,12 +35,23 @@ test('invalid paste explains how to recover', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('without a timing line');
 });
 
-test('an unregistered Studio product does not expose a dead checkout link', async ({ page }) => {
+test('Studio offers the configured hosted checkout route', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Get Studio' }).click();
-  await expect(page.getByRole('status')).toContainText('Checkout is not available yet');
-  await expect(page.getByRole('link', { name: 'Buy Studio securely' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Buy Studio securely' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/caption-fix-queue/checkout');
   await expect(page.getByRole('button', { name: 'Restore purchase' })).toBeVisible();
+});
+
+test('an unverified restored token remains locked while verification is offline', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Get Studio' }).click();
+  await page.getByLabel('Have a license? Paste it here').fill('not-a-real-license');
+  await page.route('https://api.sociobot.in/api/v1/products/caption-fix-queue/verify?license=not-a-real-license', async (route) => route.abort('internetdisconnected'));
+  await page.getByRole('button', { name: 'Restore purchase' }).click();
+  await expect(page.getByRole('alert')).toContainText('Could not reach the license service');
+  await expect(page.getByRole('button', { name: 'Studio active' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Buy Studio securely' })).toBeVisible();
+  await expect(page.evaluate(() => localStorage.getItem('sb_license_verdict:caption-fix-queue'))).resolves.toBeNull();
 });
 
 test('repair Undo restores the original caption in the exported SRT', async ({ page }) => {
