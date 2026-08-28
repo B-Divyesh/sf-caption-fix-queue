@@ -274,17 +274,6 @@
       "why": "bridges separate communities"
     },
     {
-      "source": "exportCaptions()",
-      "target": "serializeCaptions()",
-      "source_files": [
-        "src/app.ts",
-        "src/parser.ts"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
       "source": "purchaseControls()",
       "target": "storedLicense()",
       "source_files": [
@@ -312,6 +301,17 @@
       "source_files": [
         "src/app.ts",
         "src/parser.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "refreshFindings()",
+      "target": "runChecks()",
+      "source_files": [
+        "src/app.ts",
+        "src/checks.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
