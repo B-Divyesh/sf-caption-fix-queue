@@ -169,17 +169,6 @@
       "source_location": "L229"
     },
     {
-      "id": "src_app_csvcell",
-      "label": "csvCell()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "file_type": "code",
-      "norm_label": "csvcell()",
-      "source_file": "src/app.ts",
-      "source_location": "L426"
-    },
-    {
       "id": "src_app_currentfinding",
       "label": "currentFinding()",
       "_callable": true,
@@ -213,17 +202,6 @@
       "source_location": "L245"
     },
     {
-      "id": "src_app_download",
-      "label": "download()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "file_type": "code",
-      "norm_label": "download()",
-      "source_file": "src/app.ts",
-      "source_location": "L438"
-    },
-    {
       "id": "src_app_emptyview",
       "label": "emptyView()",
       "_callable": true,
@@ -244,39 +222,6 @@
       "norm_label": "escapehtml()",
       "source_file": "src/app.ts",
       "source_location": "L77"
-    },
-    {
-      "id": "src_app_exportcaptions",
-      "label": "exportCaptions()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "file_type": "code",
-      "norm_label": "exportcaptions()",
-      "source_file": "src/app.ts",
-      "source_location": "L411"
-    },
-    {
-      "id": "src_app_exporthistory",
-      "label": "exportHistory()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "file_type": "code",
-      "norm_label": "exporthistory()",
-      "source_file": "src/app.ts",
-      "source_location": "L421"
-    },
-    {
-      "id": "src_app_exportproject",
-      "label": "exportProject()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "file_type": "code",
-      "norm_label": "exportproject()",
-      "source_file": "src/app.ts",
-      "source_location": "L417"
     },
     {
       "id": "src_app_finishedstate",
@@ -959,6 +904,61 @@
       "norm_label": "installbrowser()",
       "source_file": "tests/license.test.ts",
       "source_location": "L7"
+    },
+    {
+      "id": "src_app_csvcell",
+      "label": "csvCell()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "file_type": "code",
+      "norm_label": "csvcell()",
+      "source_file": "src/app.ts",
+      "source_location": "L426"
+    },
+    {
+      "id": "src_app_download",
+      "label": "download()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "file_type": "code",
+      "norm_label": "download()",
+      "source_file": "src/app.ts",
+      "source_location": "L438"
+    },
+    {
+      "id": "src_app_exportcaptions",
+      "label": "exportCaptions()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "file_type": "code",
+      "norm_label": "exportcaptions()",
+      "source_file": "src/app.ts",
+      "source_location": "L411"
+    },
+    {
+      "id": "src_app_exporthistory",
+      "label": "exportHistory()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "file_type": "code",
+      "norm_label": "exporthistory()",
+      "source_file": "src/app.ts",
+      "source_location": "L421"
+    },
+    {
+      "id": "src_app_exportproject",
+      "label": "exportProject()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "file_type": "code",
+      "norm_label": "exportproject()",
+      "source_file": "src/app.ts",
+      "source_location": "L417"
     },
     {
       "id": "src_storage_clearstate",
@@ -5972,5 +5972,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6265d2e2c59eaefb3c03176b50c8e0978a5e9bde"
+  "built_at_commit": "350a4ee12c3d601973c49d8aa725c4e26507d211"
 }
