@@ -25,6 +25,29 @@ function statusFor(id: string, statuses: Record<string, FindingStatus>): Finding
   return statuses[id] ?? 'open';
 }
 
+/**
+ * Remove a repeated word only within a text node. Caption markup is copied
+ * untouched, which is important for WebVTT voice, class, ruby, and styling
+ * annotations. If the two words are separated by markup we intentionally do
+ * not offer an automatic repair: the human can still use the editor.
+ */
+export function removeAdjacentRepeatPreservingMarkup(source: string, word: string): string | undefined {
+  const pattern = new RegExp(`\\b(${escapeRegExp(word)})\\s+\\1\\b`, 'iu');
+  const tag = /<[^>]*>/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tag.exec(source))) {
+    const textNode = source.slice(cursor, match.index);
+    if (pattern.test(textNode)) return `${source.slice(0, cursor)}${textNode.replace(pattern, '$1')}${source.slice(match.index)}`;
+    cursor = match.index + match[0].length;
+  }
+
+  const finalTextNode = source.slice(cursor);
+  if (pattern.test(finalTextNode)) return `${source.slice(0, cursor)}${finalTextNode.replace(pattern, '$1')}`;
+  return undefined;
+}
+
 export function runChecks(document: CaptionDocument, glossary: GlossaryEntry[], statuses: Record<string, FindingStatus> = {}): Finding[] {
   const findings: Finding[] = [];
   const speakers = new Map<string, { raw: string; cueId: string }[]>();
@@ -35,7 +58,7 @@ export function runChecks(document: CaptionDocument, glossary: GlossaryEntry[], 
     const adjacentRepeat = cueWords.find((word, index) => index > 0 && word.toLocaleLowerCase() === cueWords[index - 1]?.toLocaleLowerCase());
     if (adjacentRepeat) {
       const id = key('repeat', cue.id, adjacentRepeat);
-      findings.push({ id, kind: 'repeat', cueId: cue.id, title: 'Possible repeated word', explanation: 'The same word appears twice in a row. This often comes from a transcription restart.', evidence: `“${adjacentRepeat} ${adjacentRepeat}”`, suggestion: text.replace(new RegExp(`\\b(${escapeRegExp(adjacentRepeat)})\\s+\\1\\b`, 'iu'), adjacentRepeat), severity: 'check', status: statusFor(id, statuses) });
+      findings.push({ id, kind: 'repeat', cueId: cue.id, title: 'Possible repeated word', explanation: 'The same word appears twice in a row. This often comes from a transcription restart.', evidence: `“${adjacentRepeat} ${adjacentRepeat}”`, suggestion: removeAdjacentRepeatPreservingMarkup(cue.text, adjacentRepeat), severity: 'check', status: statusFor(id, statuses) });
     }
     const previous = document.cues[cueIndex - 1];
     if (previous && text.length > 3 && text.toLocaleLowerCase() === plainText(previous.text).toLocaleLowerCase()) {

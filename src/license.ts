@@ -1,5 +1,6 @@
 const SLUG = 'caption-fix-queue';
 const API_BASE = import.meta.env.VITE_BILLING_API || 'https://api.sociobot.in/api/v1';
+const CHECKOUT_ENABLED = import.meta.env.VITE_STUDIO_CHECKOUT_ENABLED === 'true';
 const TOKEN_KEY = `sb_license:${SLUG}`;
 const VERDICT_KEY = `sb_license_verdict:${SLUG}`;
 
@@ -7,6 +8,11 @@ interface CachedVerdict { valid: boolean; checkedAt: number; reason?: string }
 
 export function checkoutUrl(): string {
   return `${API_BASE}/products/${SLUG}/checkout`;
+}
+
+/** Checkout is opt-in at build time after the factory has enabled the product. */
+export function studioCheckoutAvailable(): boolean {
+  return CHECKOUT_ENABLED;
 }
 
 export function captureReturnedLicense(): void {

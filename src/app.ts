@@ -1,6 +1,6 @@
 import './styles.css';
 import { runChecks } from './checks';
-import { captureReturnedLicense, cachedUnlock, checkoutUrl, saveLicense, storedLicense, verifyLicense } from './license';
+import { captureReturnedLicense, cachedUnlock, checkoutUrl, saveLicense, storedLicense, studioCheckoutAvailable, verifyLicense } from './license';
 import { formatTimestamp, parseCaptions, serializeCaptions } from './parser';
 import { clearState, loadState, saveState } from './storage';
 import type { CaptionDocument, Finding, FindingKind, FindingStatus, GlossaryEntry, ReviewRecord, SavedState } from './types';
@@ -56,7 +56,14 @@ let showResolved = false;
 let editing = false;
 let isStudio = false;
 let licenseInactive = false;
-let lastAction: { id: string; previous: FindingStatus; historyLength: number } | undefined;
+interface LastAction {
+  id: string;
+  previous: FindingStatus;
+  historyLength: number;
+  repair?: { cueId: string; previousText: string; previousUpdatedAt: number };
+}
+
+let lastAction: LastAction | undefined;
 let saveTimer: number | undefined;
 
 const rootElement = document.querySelector<HTMLDivElement>('#app');
@@ -231,10 +238,17 @@ function finishedState(): string {
   return `<section class="detail-panel completion-state"><span class="completion-leaf" aria-hidden="true">✓</span><p class="eyebrow">Queue resolved</p><h2>Every finding has a decision</h2><p>Export the repaired captions, or show resolved findings to revisit a decision.</p><button class="primary-button" id="export-button-secondary" type="button">Export ${documentState?.format.toUpperCase()}</button></section>`;
 }
 
+function purchaseControls(): string {
+  const checkout = studioCheckoutAvailable()
+    ? `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p>`
+    : '<p class="checkout-unavailable" role="status"><strong>Checkout is not available yet.</strong> Studio purchase will appear here once it is enabled. The free local checker is fully available.</p>';
+  return `${checkout}<hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
+}
+
 function dialogs(): string {
   return `<dialog id="paste-dialog" aria-labelledby="paste-title"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close paste dialog">×</button><p class="eyebrow">Local import</p><h2 id="paste-title">Paste caption text</h2><label for="paste-name">File name</label><input id="paste-name" value="pasted-captions.srt" /><label for="paste-content">SRT or WebVTT captions</label><textarea id="paste-content" rows="10" placeholder="1&#10;00:00:01,000 --> 00:00:03,000&#10;Caption text"></textarea><p class="form-error" id="paste-error" role="alert"></p><button class="primary-button" id="parse-paste" type="button">Check pasted captions</button></form></dialog>
   <dialog id="glossary-dialog" aria-labelledby="glossary-title"><div class="dialog-card wide-dialog"><button class="dialog-close" data-close="glossary-dialog" aria-label="Close glossary">×</button><p class="eyebrow">Preferred terms</p><h2 id="glossary-title">Glossary</h2><p>List a preferred spelling and comma-separated variants. Checks update immediately.</p><form id="glossary-form"><label for="preferred-term">Preferred spelling</label><input id="preferred-term" required /><label for="variant-terms">Variants to flag</label><input id="variant-terms" required aria-describedby="variant-help" /><small id="variant-help">Example: bio-char, bio char</small><button class="primary-button" type="submit">Add term</button></form><ul class="glossary-list">${glossary.map((entry) => `<li><span><strong>${escapeHtml(entry.preferred)}</strong><small>${escapeHtml(entry.variants.join(', '))}</small></span><button data-remove-term="${escapeHtml(entry.id)}" type="button" aria-label="Remove ${escapeHtml(entry.preferred)}">Remove</button></li>`).join('') || '<li class="queue-empty">No terms yet.</li>'}</ul><div class="studio-tools"><strong>Portable glossary · Studio</strong><p>Move a shared glossary between devices without an account.</p><button class="secondary-button" id="glossary-import" type="button">Import JSON ${isStudio ? '' : '· Unlock'}</button><button class="text-button" id="glossary-export" type="button">Export JSON ${isStudio ? '' : '· Unlock'}</button><input class="visually-hidden" id="glossary-file" type="file" aria-label="Import glossary JSON" accept="application/json,.json" /></div></div></dialog>
-  <dialog id="studio-dialog" aria-labelledby="studio-title"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio unlock</p><h2 id="studio-title">Keep the field notes moving across your team.</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary files</li><li>Export a portable team review-history CSV</li><li>Free checker, repairs, and caption/project exports stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
+  <dialog id="studio-dialog" aria-labelledby="studio-title"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio unlock</p><h2 id="studio-title">Keep the field notes moving across your team.</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary files</li><li>Export a portable team review-history CSV</li><li>Free checker, repairs, and caption/project exports stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : purchaseControls()}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
 }
 
 function footer(): string {
@@ -364,7 +378,12 @@ function repairWith(text: string): void {
   const finding = currentFinding();
   const cue = documentState?.cues.find((item) => item.id === finding?.cueId);
   if (!finding || !cue || !documentState) return;
-  lastAction = { id: finding.id, previous: statuses[finding.id] ?? 'open', historyLength: reviewHistory.length };
+  lastAction = {
+    id: finding.id,
+    previous: statuses[finding.id] ?? 'open',
+    historyLength: reviewHistory.length,
+    repair: { cueId: cue.id, previousText: cue.text, previousUpdatedAt: documentState.updatedAt }
+  };
   cue.text = text; documentState.updatedAt = Date.now(); statuses[finding.id] = 'repaired';
   reviewHistory.push({ id: `${Date.now()}-${finding.id}`, documentName: documentState.name, cueId: finding.cueId, findingKind: finding.kind, action: 'repaired', at: Date.now() });
   editing = false; refreshFindings(); scheduleSave(); render(); toast('Repair saved and all checks rerun.', 'normal', true);
@@ -372,9 +391,17 @@ function repairWith(text: string): void {
 
 function undoLast(): void {
   if (!lastAction) return;
-  statuses[lastAction.id] = lastAction.previous;
-  reviewHistory = reviewHistory.slice(0, lastAction.historyLength);
-  selectedId = lastAction.id; lastAction = undefined; refreshFindings(); scheduleSave(); render(); toast('Decision undone.');
+  const action = lastAction;
+  if (action.repair && documentState) {
+    const cue = documentState.cues.find((item) => item.id === action.repair?.cueId);
+    if (cue) {
+      cue.text = action.repair.previousText;
+      documentState.updatedAt = action.repair.previousUpdatedAt;
+    }
+  }
+  statuses[action.id] = action.previous;
+  reviewHistory = reviewHistory.slice(0, action.historyLength);
+  selectedId = action.id; lastAction = undefined; refreshFindings(); scheduleSave(); render(); toast(action.repair ? 'Repair undone.' : 'Decision undone.');
 }
 
 function moveFinding(direction: number): void {

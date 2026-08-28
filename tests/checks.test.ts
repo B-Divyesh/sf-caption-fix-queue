@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runChecks } from '../src/checks';
+import { removeAdjacentRepeatPreservingMarkup, runChecks } from '../src/checks';
 import { parseCaptions } from '../src/parser';
 
 describe('explainable checks', () => {
@@ -16,5 +16,16 @@ describe('explainable checks', () => {
     expect(first).toBeDefined();
     const second = runChecks(document, [], { [first!.id]: 'accepted' })[0];
     expect(second?.status).toBe('accepted');
+  });
+
+  it('keeps WebVTT voice markup and original capitalization in a repeat suggestion', () => {
+    const source = '<v MARA>Hello hello</v>';
+    expect(removeAdjacentRepeatPreservingMarkup(source, 'hello')).toBe('<v MARA>Hello</v>');
+    const document = parseCaptions(`WEBVTT\n\nintro\n00:00.000 --> 00:02.000 line:90%\n${source}`, 'voice.vtt');
+    expect(runChecks(document, []).find((finding) => finding.kind === 'repeat')?.suggestion).toBe('<v MARA>Hello</v>');
+  });
+
+  it('withholds a repeat suggestion when tags divide the repeated words', () => {
+    expect(removeAdjacentRepeatPreservingMarkup('Hello <i>hello</i>', 'hello')).toBeUndefined();
   });
 });

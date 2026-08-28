@@ -65,7 +65,13 @@ the host at build time without changing a product ID:
 VITE_BILLING_API=https://pilot-api.sociobot.in/api/v1 npm run build
 ```
 
-The factory registers the `caption-fix-queue` product separately.
+The factory registers the `caption-fix-queue` product separately. Checkout is
+deliberately hidden until that registration is complete; enable the hosted buy
+link only in the registered deployment build:
+
+```sh
+VITE_STUDIO_CHECKOUT_ENABLED=true npm run build
+```
 
 ## Scope
 

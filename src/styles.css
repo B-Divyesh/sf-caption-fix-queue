@@ -52,7 +52,7 @@ h2 { font-size: clamp(1.5rem, 2.4vw, 2rem); }
 .eyebrow { margin-bottom: 6px; color: var(--fern-deep); font: 700 .75rem/1.2 Arial, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
 
 .site-header { min-height: 72px; padding: 12px clamp(16px, 4vw, 56px); display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--rule); }
-.brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font-family: Georgia, serif; font-size: 1.16rem; font-weight: 700; text-decoration: none; }
+.brand { min-height: 44px; display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font-family: Georgia, serif; font-size: 1.16rem; font-weight: 700; text-decoration: none; }
 .brand-mark { position: relative; display: inline-block; width: 34px; height: 28px; }
 .brand-mark span { position: absolute; left: 0; width: 29px; height: 10px; border: 2px solid var(--fern); background: var(--surface); }
 .brand-mark span:first-child { top: 1px; }
@@ -62,7 +62,7 @@ h2 { font-size: clamp(1.5rem, 2.4vw, 2rem); }
 .local-badge { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: .82rem; }
 .local-badge svg { width: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .quiet-button, .menu-button, .text-button, .finding-nav button, .footer-studio { min-height: 44px; border: 0; background: transparent; cursor: pointer; }
-.quiet-button { padding: 0 12px; border: 1px solid var(--rule); border-radius: 6px; }
+.quiet-button { min-width: 44px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 6px; }
 .quiet-button:hover { background: var(--surface); }
 .studio-active { border-color: var(--fern); color: var(--fern-deep); background: var(--moss); }
 .license-notice { padding: 8px 16px; background: color-mix(in srgb, var(--clay) 12%, var(--surface)); color: var(--ink); border-bottom: 1px solid var(--clay); text-align: center; font-size: .82rem; }
@@ -211,6 +211,7 @@ dialog::backdrop { background: rgb(16 27 20 / 68%); backdrop-filter: blur(2px); 
 .studio-dialog li { margin: 8px 0; }
 .studio-dialog .button-link { width: 100%; margin: 10px 0; }
 .merchant-note, .legal-line { font-size: .76rem; }
+.checkout-unavailable { margin: 18px 0; padding: 12px 14px; border-left: 3px solid var(--pollen); background: color-mix(in srgb, var(--pollen) 12%, var(--surface)); color: var(--ink) !important; font-size: .88rem; }
 .license-good { padding: 12px; background: var(--moss); color: var(--fern-deep) !important; font-weight: 700; }
 .dialog-card hr { margin: 24px 0; border: 0; border-top: 1px solid var(--rule); }
 
@@ -222,11 +223,12 @@ dialog::backdrop { background: rgb(16 27 20 / 68%); backdrop-filter: blur(2px); 
 
 footer { min-height: 120px; padding: 30px clamp(16px, 4vw, 56px) calc(30px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr auto; gap: 7px 24px; align-items: start; border-top: 1px solid var(--rule); color: var(--muted); font-size: .78rem; }
 footer p { margin: 0; }
-footer nav { display: flex; gap: 18px; }
-.footer-studio { min-height: auto; padding: 0; color: var(--fern-deep); text-decoration: underline; text-underline-offset: 3px; }
+footer nav { display: flex; gap: 8px; }
+footer nav a, .footer-studio { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.footer-studio { padding: 0; color: var(--fern-deep); text-decoration: underline; text-underline-offset: 3px; }
 .art-credit { grid-column: 1 / -1; font-size: .68rem; }
 
-@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+@keyframes toast-in { from { transform: translateY(10px); } }
 
 @media (max-width: 900px) {
   .local-badge { display: none; }
@@ -282,7 +284,7 @@ footer nav { display: flex; gap: 18px; }
 
 @media (max-width: 420px) {
   .brand-mark { display: none; }
-  .header-actions { gap: 6px; }
+  .header-actions { gap: 8px; }
   .site-header { padding-inline: 12px; }
   .quiet-button { font-size: .78rem; }
   .trust-list { display: grid; }
