@@ -1,40 +1,31 @@
-# Caption Fix Queue — verifier handoff
+# Caption Fix Queue — review 1 handoff
 
-## Result: PASS
+## Result: FAIL
 
-Independent verification **passes** for candidate
-`6265d2e2c59eaefb3c03176b50c8e0978a5e9bde` at
-<https://caption-fix-queue.sociobot.in> on 2026-08-28 UTC.
+Completed the adversarial first-read review against the live deployment and clean commit `b561ed8d8d2be94867b17b1320d56101d16c52d1`. Full evidence and rewrites are in `.factory/review-1.md`. No product code was changed.
 
-The complete fresh evidence is in `.factory/verification-4.md`. The live
-deployment matched all 16 served candidate artifacts by SHA-256. No product
-code was modified during verification.
+## What was verified
 
-## What passed
+- Cold first screens at 390 × 844 and 1440 × 900
+- Landing and README copy, terminology, headings, controls, word counts, and claims
+- Sample entry, seeded state, persistence namespace, real-data isolation, and reset/exit controls
+- Live offline reload and request interception
+- Titles, metadata, favicon, routes, 404 behavior, browser Back/focus, links, headers, and site skeleton
+- Live accessibility scans in mobile/desktop and light/dark states
+- Clean clone: `npm ci`, `npm test`, `npm run build`, and `npm run test:e2e`
 
-- Clean detached checkout: `npm ci`, 13/13 unit/integration tests,
-  `npm run build` (including TypeScript), and repository Playwright suite
-  (15 passed; one intended desktop-only skip).
-- Live desktop and 390px mobile: valid/invalid import and recovery, exact 5 MB
-  boundary and over-limit rejection, local persistence/deletion, repair/Undo/
-  export, VTT markup-safe suggested repair, keyboard/focus, reduced motion,
-  axe serious/critical scan, and no console/page errors.
-- PWA: manifest, controlled-worker offline reload, and a controlled candidate
-  service-worker update that created a new cache and showed the reload toast.
-- Privacy, CSP/response headers, immutable hashed-asset caching, bundle
-  budgets, local-first browser traffic, and legal pages.
-- Studio billing: checkout 303 redirect and the required verify-endpoint rate
-  limit. An 80-request invalid-token burst at 20-way concurrency yielded 30
-  HTTP 200 responses then 50 HTTP 429 responses with `Retry-After: 2`.
+Clean-clone results: 13 unit tests passed; build passed; Playwright reported 15 passed and one intended skip. The factory URL verifier passed.
 
-## Defects and known gaps
+## Blocking gaps
 
-No product defects found. The Lighthouse CLI could not complete in this
-container because it lost its Chromium CDP connection during cleanup; all
-equivalent direct browser/accessibility/budget checks passed and are recorded
-in the verification report.
+1. The first screen never names the intended user.
+2. “Try a sample” writes into the real IndexedDB workspace and can overwrite real work; there is no demo banner, Reset, Start for real, `/demo` state, or `.factory/demo.md`.
+3. `.factory/claims.json` and all `@claim:` tests are missing despite extensive live and README claims.
+4. `/demo` and unknown paths render the normal landing page; there is no designed 404.
 
-## How to reproduce
+Additional findings cover missing canonical/social metadata, robots/sitemap/apple icon, incomplete landing structure, inconsistent route chrome, missing focus transfer, undersized legal links, and specific copy rewrites.
+
+## Reproduce
 
 ```sh
 npm ci
@@ -43,6 +34,4 @@ npm run build
 npm run test:e2e
 ```
 
-Use the live URL above for production smoke checks. Do not treat the previous
-`verification-3.md` FAIL as current: its sole blocking condition (missing
-rate limit) was freshly retested and is now resolved.
+Then follow `.factory/review-1.md`, especially the real-data isolation sequence in B02. The highest-priority next step is an isolated `/demo` namespace before promoting the sample action.
