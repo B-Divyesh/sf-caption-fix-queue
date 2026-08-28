@@ -1,70 +1,65 @@
-# Caption Fix Queue — build handoff
+# Caption Fix Queue — verification handoff
 
-## Shipped
+## Result: FAIL
 
-- Finished Vite + vanilla TypeScript PWA for local SRT/WebVTT review.
-- Strict parser with useful errors; preserves VTT header metadata, identifiers,
-  settings, NOTE, STYLE, and REGION blocks through export.
-- Six explainable check families: improbable repeats, blank cues/runs, invisible or
-  unsafe characters, reading speed/line load, inconsistent speaker names, and
-  glossary variants.
-- Complete review loop: context, evidence, manual or suggested repair, rerun checks,
-  accept, dismiss, undo, progress, resolved filter, and J/K/E/A/D keyboard path.
-- IndexedDB persistence across refresh/tab close; SRT/VTT export, JSON project
-  export/import, local deletion, and CSV history export.
-- Free editable glossary plus a $19 one-time Studio unlock for shared-glossary JSON
-  and team-history CSV. Implements return-token capture, local storage, daily
-  Sociobot verification, optimistic offline unlock, invalid-license reconciliation,
-  hosted checkout, and paste-to-restore. No product ID is embedded; the required
-  slug route is used. The factory still needs to register the billing product.
-- Install manifest, 192/512/maskable icons, versioned app-shell/runtime caches,
-  offline fallback, update notice, and explicit offline state.
-- Responsive 390px review UI, light/dark botanical field-guide treatments, reduced-
-  motion handling, focus states, skip link, landmarks, dialog labels, touch targets,
-  and legal pages.
-- Original generated herbarium hero reviewed and optimized to a 92 KB WebP with a
-  145 KB JPEG fallback. Prompt/model/date are in `.factory/design.md` and
-  `assets/src/` sidecars.
+Independent QA tested candidate `778243fea3060d95769750ec0af0cc8046da2725`
+from a clean checkout and the live deployment at
+<https://caption-fix-queue.sociobot.in> on 2026-08-28 UTC. All 16 built files match
+the live deployment byte-for-byte, so this verdict applies to both.
 
-## Verification (2026-08-28 UTC)
+## What passed
 
-All run against the production build in this repository:
+- `npm ci`: success, 0 audit vulnerabilities.
+- `npm test`: 6/6 tests pass.
+- `npm run build`: type check and exact production build pass; `dist/` produced.
+- `npm run test:e2e`: 6/6 desktop and 390×844 Chromium tests pass.
+- Core local SRT/VTT import, six check families, manual repair, accept/dismiss,
+  decision Undo, persistence, export, deletion, validation recovery, clean state,
+  and drag/drop work.
+- Keyboard navigation, visible focus, dark mode, reduced motion, 390 px layout,
+  legal pages, and stabilized axe checks pass without serious/critical findings.
+- Service-worker install, version update notice/cache replacement, persisted-state
+  offline reload, and offline legal pages work.
+- Fresh workflows make no cross-origin requests and do not upload captions.
+- Lighthouse 12.8.2: local 100/100/100 and live 100/100/100 for Performance,
+  Accessibility, and Best Practices. Live LCP 1.37 s, TBT 16 ms, CLS 0.
+- Budgets pass: 37.0 KB JS, 19.9 KB CSS, no fonts, 93.8 KB WebP hero.
 
-| Check | Result |
-| --- | --- |
-| `npm test` | 6/6 unit tests pass |
-| `npm run build` | Pass; output is `dist/` with root `index.html` |
-| `npm run test:e2e` | 6/6 pass across desktop Chromium and 390×844 mobile |
-| Offline Playwright | Installed shell reload and local UI pass on desktop + mobile |
-| Axe in Playwright | No serious/critical issues, working UI in light and dark modes |
-| Factory `verify-url.sh` | Pass; no console/page errors, title/lang/main/one h1/alt checks pass |
-| Lighthouse 12.8.2 mobile | Performance 100, Accessibility 100, Best Practices 100 |
+## Release blockers
 
-Lighthouse lab metrics: LCP 1.8 s, CLS 0, total blocking time 0 ms, speed index
-0.9 s. Initial production assets: 37.02 KB JS (12.69 KB gzip), 19.90 KB CSS
-(5.37 KB gzip), no font download, 92 KB WebP hero. These are below the 200 KB JS,
-50 KB CSS, 120 KB font, and 300 KB hero budgets.
+1. **High — Studio checkout is broken in production.** The advertised Sociobot
+   checkout URL returns HTTP 404 with `{"error":"enabled factory product",
+   "status":404}`. The billing product is not enabled/registered.
+2. **High — repair Undo is false feedback.** Undo after saving a text repair does
+   not restore the previous cue text; exporting proves the edit remains.
+3. **High — suggested fixes can corrupt WebVTT semantics.** Applying the repeat
+   suggestion to `<v MARA>Hello hello</v>` exports lowercase `hello`, stripping
+   the voice tags and capitalization.
 
-Exact clean-clone commands:
+## Other defects
 
-```sh
-npm install
-npm test
-npm run build
-npm run test:e2e
-```
+- **Medium:** brand/theme/footer targets at 390 px are below the required 44×44
+  CSS px, and the mobile header gap is 6 px rather than 8 px.
+- **Medium:** all live assets, including hashed JS/CSS, use only
+  `max-age=30, must-revalidate` rather than long-lived immutable caching.
+- **Medium:** live responses omit CSP, clickjacking protection, and
+  Permissions-Policy.
+- **Low:** the toast opacity entrance can briefly trigger an axe serious contrast
+  failure (2.93:1); stabilized scans are clean.
+- **Low/configuration:** the manifest is served as `application/octet-stream`,
+  although Chromium parses it without errors.
 
-Deployment serves `./dist` as a static site. Configure static routing so `/privacy/`
-and `/terms/` retain their emitted HTML documents.
+Full commands, evidence, reproduction steps, hashes, response-policy results, and
+coverage are in [`.factory/verification.md`](verification.md).
 
-## Known gaps and next steps
+## Required next steps
 
-- Studio checkout/verification cannot complete until the factory registers the live
-  `caption-fix-queue` billing product. Use `VITE_BILLING_API` for pilot registration.
-- The checker intentionally has no video playback, transcript generation, cloud
-  sync, or factual auto-correction. Reading-speed and speaker checks are heuristics;
-  a human watch-through remains necessary.
-- Review history is capped to the latest 1,000 local events to keep browser storage
-  bounded. V1 has portable files rather than account-based team synchronization.
-- Lighthouse numbers are local lab measurements and should be rechecked on the
-  deployed origin after CDN/cache configuration is applied.
+- Register/enable the live `caption-fix-queue` Sociobot billing product and verify
+  a real checkout/return/restore flow.
+- Store and restore prior cue text in repair Undo.
+- Generate suggested replacements against the original marked-up cue while
+  preserving WebVTT tags/entities and original capitalization.
+- Correct target sizing, toast transition contrast, immutable asset caching, and
+  response headers; then rerun the complete verification matrix.
+
+No product code was modified by the verifier.
