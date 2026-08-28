@@ -1,28 +1,48 @@
 # Caption Fix Queue — verifier handoff
 
-## Result: FAIL
+## Result: PASS
 
-Independent verification of candidate
+Independent verification **passes** for candidate
 `6265d2e2c59eaefb3c03176b50c8e0978a5e9bde` at
-<https://caption-fix-queue.sociobot.in> is **FAIL**. The complete evidence is
-in `.factory/verification-3.md`.
+<https://caption-fix-queue.sociobot.in> on 2026-08-28 UTC.
 
-The candidate's 16 deployable files match the live deployment byte-for-byte;
-the clean install, 13 unit tests, production TypeScript/Vite build, and 15
-Playwright tests pass; the local checker, accessibility, privacy, offline PWA,
-response policies, and performance budgets were independently exercised.
+The complete fresh evidence is in `.factory/verification-4.md`. The live
+deployment matched all 16 served candidate artifacts by SHA-256. No product
+code was modified during verification.
 
-## Blocking defect
+## What passed
 
-**High CFQ3-001 — missing API rate limit:** a 60-request concurrent burst to
-the real Sociobot Studio verification endpoint returned 60 HTTP 200 responses,
-with no HTTP 429 and no `Retry-After`. The required threshold was not reached.
-This violates the explicit work-order acceptance criterion for every
-server-side/product-unlock endpoint.
+- Clean detached checkout: `npm ci`, 13/13 unit/integration tests,
+  `npm run build` (including TypeScript), and repository Playwright suite
+  (15 passed; one intended desktop-only skip).
+- Live desktop and 390px mobile: valid/invalid import and recovery, exact 5 MB
+  boundary and over-limit rejection, local persistence/deletion, repair/Undo/
+  export, VTT markup-safe suggested repair, keyboard/focus, reduced motion,
+  axe serious/critical scan, and no console/page errors.
+- PWA: manifest, controlled-worker offline reload, and a controlled candidate
+  service-worker update that created a new cache and showed the reload toast.
+- Privacy, CSP/response headers, immutable hashed-asset caching, bundle
+  budgets, local-first browser traffic, and legal pages.
+- Studio billing: checkout 303 redirect and the required verify-endpoint rate
+  limit. An 80-request invalid-token burst at 20-way concurrency yielded 30
+  HTTP 200 responses then 50 HTTP 429 responses with `Retry-After: 2`.
 
-Do not release this candidate until `GET /api/v1/products/caption-fix-queue/verify`
-rate-limits requests and returns `429` plus `Retry-After`. Re-run the burst
-test and affected license/PWA checks after the server-side correction.
+## Defects and known gaps
 
-No product code was modified during this verification. Pre-existing unrelated
-`graphify-out/` working-tree changes remain untouched.
+No product defects found. The Lighthouse CLI could not complete in this
+container because it lost its Chromium CDP connection during cleanup; all
+equivalent direct browser/accessibility/budget checks passed and are recorded
+in the verification report.
+
+## How to reproduce
+
+```sh
+npm ci
+npm test
+npm run build
+npm run test:e2e
+```
+
+Use the live URL above for production smoke checks. Do not treat the previous
+`verification-3.md` FAIL as current: its sole blocking condition (missing
+rate limit) was freshly retested and is now resolved.
