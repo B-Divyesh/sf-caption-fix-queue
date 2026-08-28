@@ -1,31 +1,58 @@
-# Caption Fix Queue — review 1 handoff
+# Caption Fix Queue — perfection loop round 1
 
-## Result: FAIL
+## Result
 
-Completed the adversarial first-read review against the live deployment and clean commit `b561ed8d8d2be94867b17b1320d56101d16c52d1`. Full evidence and rewrites are in `.factory/review-1.md`. No product code was changed.
+All four BLOCKING findings and every major, minor, copy, claim, mobile, legal,
+routing, metadata, accessibility, privacy, offline, and performance item from
+`.factory/review-1.md` are resolved. Product code is commit
+`d9438690aff44ac43dd73ddedd260d31af67e237`.
 
-## What was verified
+## What changed
 
-- Cold first screens at 390 × 844 and 1440 × 900
-- Landing and README copy, terminology, headings, controls, word counts, and claims
-- Sample entry, seeded state, persistence namespace, real-data isolation, and reset/exit controls
-- Live offline reload and request interception
-- Titles, metadata, favicon, routes, 404 behavior, browser Back/focus, links, headers, and site skeleton
-- Live accessibility scans in mobile/desktop and light/dark states
-- Clean clone: `npm ci`, `npm test`, `npm run build`, and `npm run test:e2e`
+- Rewrote the first screen around the reviewed job and audience. The primary
+  action now opens seven sample cues with six findings.
+- Added isolated `?demo=1` and `/demo` entry points. Demo work uses only
+  IndexedDB database `demo:caption-fix-queue` and never opens the real database.
+- Added a persistent demo banner, Reset demo, and Start for real. Exit deletes
+  demo state and restores an existing real workspace.
+- Added `.factory/claims.json` with 12 claims and exactly one tagged test per
+  claim. Tests cover rule boundaries, privacy traffic, all imports and exports,
+  every review decision, persistence, billing, offline work, and provenance.
+- Added distinct route metadata, direct `/demo`, a botanical 404 with deployed
+  404 status configuration, focus announcements, shared chrome, legal links,
+  robots, sitemap, canonical tags, social metadata, and app icons.
+- Added the required landing sections, plain copy, 44 px mobile targets, legal
+  focus behavior, responsive review layout, and immediate durable saves.
+- Preserved the caption-herbarium visual thesis. Added only an art-derived
+  1200×630 social card and 180×180 touch icon.
+- Added `.factory/demo.md`, `.factory/copy-audit.md`, and the verb-first catalog
+  description. README now maps its product claims to tested behavior.
 
-Clean-clone results: 13 unit tests passed; build passed; Playwright reported 15 passed and one intended skip. The factory URL verifier passed.
+## Exact verification evidence
 
-## Blocking gaps
+Fresh clone: `/tmp/caption-fix-queue-clean.oYuitP` at
+`d9438690aff44ac43dd73ddedd260d31af67e237`.
 
-1. The first screen never names the intended user.
-2. “Try a sample” writes into the real IndexedDB workspace and can overwrite real work; there is no demo banner, Reset, Start for real, `/demo` state, or `.factory/demo.md`.
-3. `.factory/claims.json` and all `@claim:` tests are missing despite extensive live and README claims.
-4. `/demo` and unknown paths render the normal landing page; there is no designed 404.
+- `npm ci`: 61 packages installed; 0 vulnerabilities.
+- `npm test`: 5 files passed; 15 tests passed.
+- `npm run build`: passed; `dist/index.html` present.
+- Production assets: app JavaScript 43.10 KB raw / 14.24 KB gzip; app CSS
+  22.71 KB raw / 5.89 KB gzip; hero WebP 93.78 KB.
+- Every one of the 12 commands in `.factory/claims.json`: passed independently.
+- `npm run test:e2e`: 38 passed; 2 intentional cross-project skips; 0 failed.
+- Playwright axe checks: 0 serious or critical findings on landing, work view,
+  light theme, and dark theme at desktop and 390×844 mobile sizes.
+- Offline claim: worker-controlled `/demo` reloaded offline, then repaired and
+  exported an SRT successfully.
+- Isolation claim: a real workspace sentinel remained byte-for-byte unchanged
+  after demo decisions, reset, and exit; the demo record was deleted.
+- Factory `verify-url.sh`: HTTP 200, title and `lang` present, one h1 and main,
+  0 missing alt attributes, 0 unlabeled buttons, and 0 console errors.
+- Lighthouse mobile: Performance 99, Accessibility 100, Best Practices 100,
+  SEO 100; LCP 1.8 s, CLS 0, TBT 100 ms.
+- Social card inspected at 1200×630; touch icon inspected at 180×180.
 
-Additional findings cover missing canonical/social metadata, robots/sitemap/apple icon, incomplete landing structure, inconsistent route chrome, missing focus transfer, undersized legal links, and specific copy rewrites.
-
-## Reproduce
+## Run it
 
 ```sh
 npm ci
@@ -34,4 +61,11 @@ npm run build
 npm run test:e2e
 ```
 
-Then follow `.factory/review-1.md`, especially the real-data isolation sequence in B02. The highest-priority next step is an isolated `/demo` namespace before promoting the sample action.
+Then run each `test` command in `.factory/claims.json`. Preview the production
+site with `npm run preview` and open `http://127.0.0.1:4173/?demo=1`.
+
+## Known gaps and next steps
+
+No blocking or known product defect remains from review 1. The release step is
+to push these commits, deploy `dist/` through the static work-order helper, and
+record the live URL check below.
