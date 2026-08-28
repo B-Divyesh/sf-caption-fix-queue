@@ -224,13 +224,13 @@
       "degree": 16
     },
     {
-      "id": "tsconfig_compileroptions",
-      "label": "compilerOptions",
+      "id": "src_app_binddialogevents",
+      "label": "bindDialogEvents()",
       "degree": 14
     },
     {
-      "id": "src_app_binddialogevents",
-      "label": "bindDialogEvents()",
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
       "degree": 14
     },
     {
@@ -244,28 +244,28 @@
       "degree": 11
     },
     {
-      "id": "src_app_schedulesave",
-      "label": "scheduleSave()",
-      "degree": 10
-    },
-    {
       "id": "src_app_initialize",
       "label": "initialize()",
       "degree": 10
     },
     {
-      "id": "src_app_currentfinding",
-      "label": "currentFinding()",
+      "id": "src_app_schedulesave",
+      "label": "scheduleSave()",
+      "degree": 10
+    },
+    {
+      "id": "src_app_importtext",
+      "label": "importText()",
       "degree": 9
     }
   ],
   "surprises": [
     {
-      "source": "deleteWorkspace()",
-      "target": "clearState()",
+      "source": "exportCaptions()",
+      "target": "serializeCaptions()",
       "source_files": [
         "src/app.ts",
-        "src/storage.ts"
+        "src/parser.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
@@ -283,33 +283,33 @@
       "why": "bridges separate communities"
     },
     {
-      "source": "scheduleSave()",
-      "target": "saveState()",
+      "source": "restoreLicense()",
+      "target": "saveLicense()",
+      "source_files": [
+        "src/app.ts",
+        "src/license.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "restoreLicense()",
+      "target": "verifyLicense()",
+      "source_files": [
+        "src/app.ts",
+        "src/license.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "deleteWorkspace()",
+      "target": "clearState()",
       "source_files": [
         "src/app.ts",
         "src/storage.ts"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
-      "source": "detailView()",
-      "target": "formatTimestamp()",
-      "source_files": [
-        "src/app.ts",
-        "src/parser.ts"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
-      "source": "importText()",
-      "target": "parseCaptions()",
-      "source_files": [
-        "src/app.ts",
-        "src/parser.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
