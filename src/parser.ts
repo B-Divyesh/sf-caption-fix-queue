@@ -20,16 +20,25 @@ export function parseCaptions(raw: string, fileName = 'Untitled captions.srt'): 
   const hasVttHeader = /^WEBVTT(?:\s|$)/.test(source.trimStart());
   const format: CaptionFormat = hasVttHeader || extension === 'vtt' ? 'vtt' : 'srt';
   let body = source;
-  if (hasVttHeader) body = source.trimStart().replace(/^WEBVTT[^\n]*\n?/, '');
+  let vttHeader: string | undefined;
+  if (hasVttHeader) {
+    const headerMatch = source.trimStart().match(/^WEBVTT[^\n]*/);
+    vttHeader = headerMatch?.[0].trim() || 'WEBVTT';
+    body = source.trimStart().replace(/^WEBVTT[^\n]*\n?/, '');
+  }
 
   const blocks = body.split(/\n{2,}/);
   const cues: Cue[] = [];
+  const metadataBlocks: string[] = [];
   for (const originalBlock of blocks) {
     const block = originalBlock.replace(/^\n+/, '').trimEnd();
-    if (!block.trim() || /^(NOTE|STYLE|REGION)(?:\s|$)/.test(block.trimStart())) continue;
+    if (!block.trim()) continue;
     const lines = block.split('\n');
     let timingIndex = lines.findIndex((line) => line.includes('-->'));
-    if (timingIndex < 0) continue;
+    if (timingIndex < 0) {
+      if (format === 'vtt') { metadataBlocks.push(block.trim()); continue; }
+      throw new Error(`Found text without a timing line near “${block.trim().slice(0, 38)}”.`);
+    }
     if (timingIndex > 1) {
       throw new Error(`A cue near “${lines[0]?.slice(0, 38)}” has content before its timing line.`);
     }
@@ -65,6 +74,8 @@ export function parseCaptions(raw: string, fileName = 'Untitled captions.srt'): 
     name: fileName.replace(/[^\p{L}\p{N}._ -]/gu, '_'),
     format,
     cues,
+    vttHeader,
+    metadataBlocks: metadataBlocks.length ? metadataBlocks : undefined,
     importedAt: now,
     updatedAt: now
   };
@@ -85,7 +96,10 @@ export function serializeCaptions(document: CaptionDocument): string {
     const timing = `${formatTimestamp(cue.startMs, document.format)} --> ${formatTimestamp(cue.endMs, document.format)}${cue.settings ? ` ${cue.settings}` : ''}`;
     return [id, timing, cue.text].filter((line) => line !== undefined && line !== '').join('\n');
   });
-  return `${document.format === 'vtt' ? 'WEBVTT\n\n' : ''}${blocks.join('\n\n')}\n`;
+  const vttPreamble = document.format === 'vtt'
+    ? `${[document.vttHeader || 'WEBVTT', ...(document.metadataBlocks ?? [])].join('\n\n')}\n\n`
+    : '';
+  return `${vttPreamble}${blocks.join('\n\n')}\n`;
 }
 
 export function plainText(text: string): string {

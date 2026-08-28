@@ -14,6 +14,8 @@ export interface CaptionDocument {
   name: string;
   format: CaptionFormat;
   cues: Cue[];
+  vttHeader?: string;
+  metadataBlocks?: string[];
   importedAt: number;
   updatedAt: number;
 }

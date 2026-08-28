@@ -55,6 +55,7 @@ let selectedId = '';
 let showResolved = false;
 let editing = false;
 let isStudio = false;
+let licenseInactive = false;
 let lastAction: { id: string; previous: FindingStatus; historyLength: number } | undefined;
 let saveTimer: number | undefined;
 
@@ -104,7 +105,7 @@ function header(): string {
       <button class="quiet-button" id="theme-button" type="button" aria-label="Change color theme"><span aria-hidden="true">◐</span><span class="wide-label">Theme</span></button>
       <button class="quiet-button ${isStudio ? 'studio-active' : ''}" id="studio-button" type="button">${isStudio ? 'Studio active' : 'Get Studio'}</button>
     </div>
-  </header>`;
+  </header>${licenseInactive ? '<div class="license-notice" role="status">Studio license is no longer active. Free features are unchanged. <button id="license-notice-link" type="button">View Studio</button></div>' : ''}`;
 }
 
 function emptyView(): string {
@@ -129,10 +130,10 @@ function emptyView(): string {
         <div class="file-glyph" aria-hidden="true"><span>CC</span></div>
         <h2 id="import-title">Bring in your captions</h2>
         <p>Drop an <strong>.srt</strong> or <strong>.vtt</strong> here</p>
-        <input class="visually-hidden" id="file-input" type="file" aria-label="Choose an SRT or VTT file" accept=".srt,.vtt,text/vtt,application/x-subrip" />
+        <input class="visually-hidden" id="file-input" type="file" aria-label="Choose an SRT, VTT, or project backup file" accept=".srt,.vtt,.json,text/vtt,application/x-subrip,application/json" />
         <button class="primary-button" id="choose-file" type="button">Choose a file</button>
         <div class="import-alternatives"><button class="text-button" id="paste-button" type="button">Paste captions</button><span aria-hidden="true">·</span><button class="text-button" id="sample-button" type="button">Try a sample</button></div>
-        <p class="file-note">SRT or WebVTT · parsed locally in your browser</p>
+        <p class="file-note">SRT, WebVTT, or a project backup · parsed locally</p>
       </div>
     </section>
     <section class="check-key" aria-labelledby="checks-title">
@@ -161,9 +162,11 @@ function workView(): string {
         <button class="menu-button" id="more-button" type="button" aria-expanded="false" aria-controls="more-menu" aria-label="More document actions">•••</button>
         <div class="more-menu" id="more-menu" hidden>
           <button id="project-export" type="button">Export project backup</button>
+          <button id="project-import" type="button">Import project backup</button>
           <button id="history-export" type="button">Export team history ${isStudio ? '' : '· Studio'}</button>
           <button id="new-file" type="button">Review another file</button>
           <button id="delete-workspace" class="danger-text" type="button">Delete local workspace</button>
+          <input class="visually-hidden" id="project-file" type="file" aria-label="Import project backup" accept=".json,application/json" />
         </div>
       </div>
     </section>
@@ -229,9 +232,9 @@ function finishedState(): string {
 }
 
 function dialogs(): string {
-  return `<dialog id="paste-dialog"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close paste dialog">×</button><p class="eyebrow">Local import</p><h2>Paste caption text</h2><label for="paste-name">File name</label><input id="paste-name" value="pasted-captions.srt" /><label for="paste-content">SRT or WebVTT captions</label><textarea id="paste-content" rows="10" placeholder="1&#10;00:00:01,000 --> 00:00:03,000&#10;Caption text"></textarea><p class="form-error" id="paste-error" role="alert"></p><button class="primary-button" id="parse-paste" type="button">Check pasted captions</button></form></dialog>
-  <dialog id="glossary-dialog"><div class="dialog-card wide-dialog"><button class="dialog-close" data-close="glossary-dialog" aria-label="Close glossary">×</button><p class="eyebrow">Preferred terms</p><h2>Glossary</h2><p>List a preferred spelling and comma-separated variants. Checks update immediately.</p><form id="glossary-form"><label for="preferred-term">Preferred spelling</label><input id="preferred-term" required /><label for="variant-terms">Variants to flag</label><input id="variant-terms" required aria-describedby="variant-help" /><small id="variant-help">Example: bio-char, bio char</small><button class="primary-button" type="submit">Add term</button></form><ul class="glossary-list">${glossary.map((entry) => `<li><span><strong>${escapeHtml(entry.preferred)}</strong><small>${escapeHtml(entry.variants.join(', '))}</small></span><button data-remove-term="${entry.id}" type="button" aria-label="Remove ${escapeHtml(entry.preferred)}">Remove</button></li>`).join('') || '<li class="queue-empty">No terms yet.</li>'}</ul><div class="studio-tools"><strong>Portable glossary · Studio</strong><p>Move a shared glossary between devices without an account.</p><button class="secondary-button" id="glossary-import" type="button">Import JSON ${isStudio ? '' : '· Unlock'}</button><button class="text-button" id="glossary-export" type="button">Export JSON ${isStudio ? '' : '· Unlock'}</button><input class="visually-hidden" id="glossary-file" type="file" accept="application/json,.json" /></div></div></dialog>
-  <dialog id="studio-dialog"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio unlock</p><h2>Keep the field notes moving across your team.</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary files</li><li>Export a portable team review-history CSV</li><li>Free checker, repairs, and caption/project exports stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
+  return `<dialog id="paste-dialog" aria-labelledby="paste-title"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close paste dialog">×</button><p class="eyebrow">Local import</p><h2 id="paste-title">Paste caption text</h2><label for="paste-name">File name</label><input id="paste-name" value="pasted-captions.srt" /><label for="paste-content">SRT or WebVTT captions</label><textarea id="paste-content" rows="10" placeholder="1&#10;00:00:01,000 --> 00:00:03,000&#10;Caption text"></textarea><p class="form-error" id="paste-error" role="alert"></p><button class="primary-button" id="parse-paste" type="button">Check pasted captions</button></form></dialog>
+  <dialog id="glossary-dialog" aria-labelledby="glossary-title"><div class="dialog-card wide-dialog"><button class="dialog-close" data-close="glossary-dialog" aria-label="Close glossary">×</button><p class="eyebrow">Preferred terms</p><h2 id="glossary-title">Glossary</h2><p>List a preferred spelling and comma-separated variants. Checks update immediately.</p><form id="glossary-form"><label for="preferred-term">Preferred spelling</label><input id="preferred-term" required /><label for="variant-terms">Variants to flag</label><input id="variant-terms" required aria-describedby="variant-help" /><small id="variant-help">Example: bio-char, bio char</small><button class="primary-button" type="submit">Add term</button></form><ul class="glossary-list">${glossary.map((entry) => `<li><span><strong>${escapeHtml(entry.preferred)}</strong><small>${escapeHtml(entry.variants.join(', '))}</small></span><button data-remove-term="${escapeHtml(entry.id)}" type="button" aria-label="Remove ${escapeHtml(entry.preferred)}">Remove</button></li>`).join('') || '<li class="queue-empty">No terms yet.</li>'}</ul><div class="studio-tools"><strong>Portable glossary · Studio</strong><p>Move a shared glossary between devices without an account.</p><button class="secondary-button" id="glossary-import" type="button">Import JSON ${isStudio ? '' : '· Unlock'}</button><button class="text-button" id="glossary-export" type="button">Export JSON ${isStudio ? '' : '· Unlock'}</button><input class="visually-hidden" id="glossary-file" type="file" aria-label="Import glossary JSON" accept="application/json,.json" /></div></div></dialog>
+  <dialog id="studio-dialog" aria-labelledby="studio-title"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio unlock</p><h2 id="studio-title">Keep the field notes moving across your team.</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary files</li><li>Export a portable team review-history CSV</li><li>Free checker, repairs, and caption/project exports stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
 }
 
 function footer(): string {
@@ -247,6 +250,7 @@ function bindEvents(): void {
   document.querySelector('#theme-button')?.addEventListener('click', toggleTheme);
   document.querySelector('#studio-button')?.addEventListener('click', () => openDialog('studio-dialog'));
   document.querySelector('#footer-studio')?.addEventListener('click', () => openDialog('studio-dialog'));
+  document.querySelector('#license-notice-link')?.addEventListener('click', () => openDialog('studio-dialog'));
   document.querySelectorAll<HTMLElement>('[data-close]').forEach((button) => button.addEventListener('click', () => closeDialog(button.dataset.close ?? '')));
   if (!documentState) bindEmptyEvents(); else bindWorkspaceEvents();
   bindDialogEvents();
@@ -282,6 +286,8 @@ function bindWorkspaceEvents(): void {
   const moreMenu = document.querySelector<HTMLElement>('#more-menu');
   moreButton?.addEventListener('click', () => { if (moreMenu) moreMenu.hidden = !moreMenu.hidden; moreButton.setAttribute('aria-expanded', String(!moreMenu?.hidden)); });
   document.querySelector('#project-export')?.addEventListener('click', exportProject);
+  document.querySelector('#project-import')?.addEventListener('click', () => document.querySelector<HTMLInputElement>('#project-file')?.click());
+  document.querySelector<HTMLInputElement>('#project-file')?.addEventListener('change', (event) => void importFile((event.currentTarget as HTMLInputElement).files?.[0]));
   document.querySelector('#history-export')?.addEventListener('click', () => { if (isStudio) exportHistory(); else openDialog('studio-dialog'); });
   document.querySelector('#new-file')?.addEventListener('click', newFile);
   document.querySelector('#delete-workspace')?.addEventListener('click', deleteWorkspace);
@@ -307,10 +313,25 @@ function bindDialogEvents(): void {
   document.querySelector('#restore-license')?.addEventListener('click', restoreLicense);
 }
 
-async function importFile(file: File): Promise<void> {
+async function importFile(file?: File): Promise<void> {
+  if (!file) return;
+  if (/\.json$/i.test(file.name) || file.type === 'application/json') { await importProject(file); return; }
   if (!/\.(srt|vtt)$/i.test(file.name) && !['text/vtt', 'application/x-subrip', 'text/plain'].includes(file.type)) { toast('Choose an SRT or VTT caption file.', 'warning'); return; }
   if (file.size > 5_000_000) { toast('That file is over 5 MB. Split it into a smaller caption file first.', 'warning'); return; }
   try { importText(await file.text(), file.name); } catch (error) { toast(messageFor(error), 'warning'); }
+}
+
+async function importProject(file: File): Promise<void> {
+  try {
+    const data = JSON.parse(await file.text()) as Partial<SavedState> & { version?: number };
+    if (data.version !== 1 || !data.document || !Array.isArray(data.document.cues) || !['srt', 'vtt'].includes(data.document.format)) throw new Error('invalid');
+    documentState = data.document;
+    statuses = data.statuses ?? {};
+    glossary = Array.isArray(data.glossary) ? data.glossary : glossary;
+    reviewHistory = Array.isArray(data.history) ? data.history : [];
+    showResolved = false; editing = false; refreshFindings(); scheduleSave(); render();
+    toast(`Restored “${documentState.name}” from its project backup.`);
+  } catch { toast('That JSON file is not a valid Caption Fix Queue project backup.', 'warning'); }
 }
 
 function importText(text: string, name: string): void {
@@ -410,8 +431,8 @@ async function restoreLicense(): Promise<void> {
   const token = input?.value.trim() ?? '';
   if (!token) { setError('license-error', 'Paste the license token from your receipt.'); return; }
   saveLicense(token); const result = await verifyLicense(true);
-  if (result.valid) { isStudio = true; render(); toast('Studio restored on this device.'); }
-  else { isStudio = false; setError('license-error', result.reason === 'offline' ? 'Could not reach the license service. Check your connection and try again.' : 'That license is not active for this product.'); }
+  if (result.valid) { isStudio = true; licenseInactive = false; render(); toast('Studio restored on this device.'); }
+  else { isStudio = false; licenseInactive = result.reason !== 'offline'; setError('license-error', result.reason === 'offline' ? 'Could not reach the license service. Check your connection and try again.' : 'That license is not active for this product.'); }
 }
 
 function openDialog(id: string): void {
@@ -479,7 +500,8 @@ async function initialize(): Promise<void> {
 async function verifyInBackground(): Promise<void> {
   if (!storedLicense()) return;
   const verdict = await verifyLicense();
-  if (verdict.valid !== isStudio && verdict.reason !== 'offline') { isStudio = verdict.valid; render(); if (!verdict.valid) toast('Studio license is no longer active. Free features are unchanged.', 'warning'); }
+  const inactiveChanged = licenseInactive !== !verdict.valid;
+  if (verdict.reason !== 'offline' && (verdict.valid !== isStudio || inactiveChanged)) { isStudio = verdict.valid; licenseInactive = !verdict.valid; render(); if (!verdict.valid) toast('Studio license is no longer active. Free features are unchanged.', 'warning'); }
 }
 
 void initialize();

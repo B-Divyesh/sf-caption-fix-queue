@@ -65,6 +65,8 @@ h2 { font-size: clamp(1.5rem, 2.4vw, 2rem); }
 .quiet-button { padding: 0 12px; border: 1px solid var(--rule); border-radius: 6px; }
 .quiet-button:hover { background: var(--surface); }
 .studio-active { border-color: var(--fern); color: var(--fern-deep); background: var(--moss); }
+.license-notice { padding: 8px 16px; background: color-mix(in srgb, var(--clay) 12%, var(--surface)); color: var(--ink); border-bottom: 1px solid var(--clay); text-align: center; font-size: .82rem; }
+.license-notice button { min-height: 44px; border: 0; background: transparent; color: var(--fern-deep); text-decoration: underline; cursor: pointer; }
 
 .empty-main { max-width: 1320px; margin: auto; padding: clamp(42px, 7vw, 90px) clamp(16px, 5vw, 68px) 84px; display: grid; grid-template-columns: minmax(300px, .82fr) minmax(480px, 1.18fr); gap: clamp(36px, 7vw, 110px); align-items: center; }
 .intro-copy { max-width: 590px; }
@@ -167,7 +169,7 @@ kbd { padding: 1px 4px; border: 1px solid var(--rule); border-radius: 3px; backg
 .cue-card header { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .cue-card time { font-variant-numeric: tabular-nums; }
 .cue-card p { margin: 12px 0 0; white-space: pre-wrap; font-family: Georgia, serif; font-size: 1.13rem; line-height: 1.5; }
-.cue-card.neighbor { opacity: .65; }
+.cue-card.neighbor { color: var(--muted); background: color-mix(in srgb, var(--surface) 82%, var(--paper)); }
 .cue-card.neighbor p { max-height: 3.2em; overflow: hidden; }
 .empty-cue { color: var(--clay); font-family: Arial, sans-serif; font-size: .9rem; font-style: italic; }
 .cue-card label, .dialog-card label { display: block; margin: 14px 0 5px; font-size: .82rem; font-weight: 700; }

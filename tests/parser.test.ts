@@ -12,11 +12,12 @@ describe('caption parser', () => {
   });
 
   it('parses WebVTT identifiers and settings', () => {
-    const document = parseCaptions(`WEBVTT\n\nintro\n00:00:01.000 --> 00:00:03.000 align:start position:10%\n<v Mara>Hello\n`, 'lesson.vtt');
+    const document = parseCaptions(`WEBVTT - Workshop captions\n\nNOTE reviewed locally\n\nSTYLE\n::cue { color: white; }\n\nintro\n00:00:01.000 --> 00:00:03.000 align:start position:10%\n<v Mara>Hello\n`, 'lesson.vtt');
     expect(document.format).toBe('vtt');
     expect(document.cues[0]?.identifier).toBe('intro');
     expect(document.cues[0]?.settings).toBe('align:start position:10%');
-    expect(serializeCaptions(document)).toMatch(/^WEBVTT/);
+    expect(serializeCaptions(document)).toContain('NOTE reviewed locally');
+    expect(serializeCaptions(document)).toContain('::cue { color: white; }');
   });
 
   it('rejects empty, malformed, and reverse-timed captions with useful errors', () => {
