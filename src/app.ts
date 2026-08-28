@@ -2,7 +2,7 @@ import './styles.css';
 import { runChecks } from './checks';
 import { captureReturnedLicense, cachedUnlock, checkoutUrl, saveLicense, storedLicense, verifyLicense } from './license';
 import { formatTimestamp, parseCaptions, serializeCaptions } from './parser';
-import { clearState, loadState, saveState } from './storage';
+import { clearState, loadState, saveState, setStorageMode } from './storage';
 import type { CaptionDocument, Finding, FindingKind, FindingStatus, GlossaryEntry, ReviewRecord, SavedState } from './types';
 
 const SAMPLE = `1
@@ -33,6 +33,13 @@ Watch for the hidden​ character.
 The biochar helps hold moisture.
 `;
 
+const HOME_TITLE = 'Caption Fix Queue — find caption lines to review';
+const DEMO_TITLE = 'Demo — Caption Fix Queue';
+const BUILD_ID = '1.0.0 · repair 1';
+const path = window.location.pathname.replace(/\/+$/, '') || '/';
+let isDemo = path === '/demo' || new URLSearchParams(window.location.search).get('demo') === '1';
+const isNotFound = !['/', '/demo'].includes(path);
+
 const kindLabels: Record<FindingKind, string> = {
   repeat: 'Repeat', blank: 'Blank run', character: 'Character', speed: 'Reading speed', speaker: 'Speaker', glossary: 'Glossary'
 };
@@ -56,6 +63,7 @@ let showResolved = false;
 let editing = false;
 let isStudio = false;
 let licenseInactive = false;
+let routeShouldFocus = false;
 interface LastAction {
   id: string;
   previous: FindingStatus;
@@ -64,7 +72,6 @@ interface LastAction {
 }
 
 let lastAction: LastAction | undefined;
-let saveTimer: number | undefined;
 
 const rootElement = document.querySelector<HTMLDivElement>('#app');
 if (!rootElement) throw new Error('Application root is missing.');
@@ -94,11 +101,14 @@ function refreshFindings(): void {
 }
 
 function scheduleSave(): void {
-  window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(async () => {
-    const state: SavedState = { document: documentState, statuses, glossary, history: reviewHistory.slice(-1000), savedAt: Date.now() };
-    try { await saveState(state); } catch { toast('Could not save locally. Export a project backup before closing.', 'warning'); }
-  }, 180);
+  const state: SavedState = {
+    document: documentState,
+    statuses: { ...statuses },
+    glossary: glossary.map((entry) => ({ ...entry, variants: [...entry.variants] })),
+    history: reviewHistory.slice(-1000).map((record) => ({ ...record })),
+    savedAt: Date.now()
+  };
+  void saveState(state).catch(() => toast('Could not save locally. Export a project backup before closing.', 'warning'));
 }
 
 function header(): string {
@@ -107,25 +117,32 @@ function header(): string {
       <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
       <span>Caption Fix Queue</span>
     </a>
-    <div class="header-actions">
-      <span class="local-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3m-11 0h12v10H6z"/></svg>Stays on this device</span>
-      <button class="quiet-button" id="theme-button" type="button" aria-label="Change color theme"><span aria-hidden="true">◐</span><span class="wide-label">Theme</span></button>
-      <button class="quiet-button ${isStudio ? 'studio-active' : ''}" id="studio-button" type="button">${isStudio ? 'Studio active' : 'Get Studio'}</button>
-    </div>
-  </header>${licenseInactive ? '<div class="license-notice" role="status">Studio license is no longer active. Free features are unchanged. <button id="license-notice-link" type="button">View Studio</button></div>' : ''}`;
+    <nav class="header-nav" aria-label="Primary">
+      <a href="/?demo=1" ${isDemo ? 'aria-current="page"' : ''}>Demo</a>
+      <a href="/privacy/">Privacy</a>
+      <button class="nav-button ${isStudio ? 'studio-active' : ''}" id="studio-button" type="button">${isStudio ? 'Studio active' : 'View Studio'}</button>
+      <button class="theme-button" id="theme-button" type="button" aria-label="${document.documentElement.dataset.theme === 'dark' ? 'Use light theme' : 'Use dark theme'}"><span aria-hidden="true">◐</span></button>
+    </nav>
+  </header>${licenseInactive ? '<div class="license-notice" role="status">Studio license is no longer active. Free features are unchanged. <button id="license-notice-link" type="button">View Studio options</button></div>' : ''}`;
 }
 
 function emptyView(): string {
   return `<main id="main" class="empty-main">
     <section class="intro-copy" aria-labelledby="page-title">
-      <p class="eyebrow">A field check for finished captions</p>
-      <h1 id="page-title">Find the few lines<br><em>worth a closer look.</em></h1>
-      <p class="lede">Drop in an SRT or VTT. You’ll get a short, explainable queue of likely defects—not another full editing suite.</p>
-      <ul class="trust-list" aria-label="Product promises">
-        <li><span aria-hidden="true">✓</span> Nothing uploads</li>
-        <li><span aria-hidden="true">✓</span> No silent rewrites</li>
-        <li><span aria-hidden="true">✓</span> Works offline</li>
+      <p class="eyebrow">Check captions before publishing</p>
+      <h1 id="page-title" tabindex="-1">Find caption lines<br><em>that need review</em></h1>
+      <p class="lede">For small video teams and community educators checking SRT or WebVTT files before publishing.</p>
+      <div class="hero-actions">
+        <a class="primary-button button-link" id="sample-link" href="/?demo=1">Try it with sample data</a>
+        <button class="text-button" id="choose-file-hero" type="button">Choose a caption file</button>
+      </div>
+      <p class="action-note">Opens seven sample cues with six findings. Demo changes are discarded.</p>
+      <ul class="trust-list" aria-label="Product facts">
+        <li><span aria-hidden="true">✓</span> Caption files stay on this device</li>
+        <li><span aria-hidden="true">✓</span> Works offline after the first visit</li>
+        <li><span aria-hidden="true">✓</span> Free checker; Studio is $19 once</li>
       </ul>
+      <input class="visually-hidden" id="file-input" type="file" aria-label="Choose an SRT, VTT, or project backup file" accept=".srt,.vtt,.json,text/vtt,application/x-subrip,application/json" />
     </section>
     <section class="import-plot" id="drop-zone" aria-labelledby="import-title">
       <picture class="hero-art">
@@ -135,23 +152,33 @@ function emptyView(): string {
       <div class="import-panel">
         <span class="specimen-number" aria-hidden="true">PLOT 01</span>
         <div class="file-glyph" aria-hidden="true"><span>CC</span></div>
-        <h2 id="import-title">Bring in your captions</h2>
+        <h2 id="import-title">Check your caption file</h2>
         <p>Drop an <strong>.srt</strong> or <strong>.vtt</strong> here</p>
-        <input class="visually-hidden" id="file-input" type="file" aria-label="Choose an SRT, VTT, or project backup file" accept=".srt,.vtt,.json,text/vtt,application/x-subrip,application/json" />
-        <button class="primary-button" id="choose-file" type="button">Choose a file</button>
-        <div class="import-alternatives"><button class="text-button" id="paste-button" type="button">Paste captions</button><span aria-hidden="true">·</span><button class="text-button" id="sample-button" type="button">Try a sample</button></div>
-        <p class="file-note">SRT, WebVTT, or a project backup · parsed locally</p>
+        <button class="secondary-button" id="choose-file" type="button">Choose a caption file</button>
+        <div class="import-alternatives"><button class="text-button" id="paste-button" type="button">Paste captions</button><span aria-hidden="true">·</span><a href="/?demo=1">Try it with sample data</a></div>
+        <p class="file-note">Imports SRT, WebVTT, or a JSON project backup in this browser.</p>
       </div>
     </section>
     <section class="check-key" aria-labelledby="checks-title">
-      <p class="eyebrow">The field key</p><h2 id="checks-title">Six checks. Each one shows its work.</h2>
+      <p class="eyebrow">What the checker finds</p><h2 id="checks-title">Six checks with a reason and matching text</h2>
       <div class="check-grid">${(Object.keys(kindLabels) as FindingKind[]).map((kind) => `<div>${icon(kind)}<span><strong>${kindLabels[kind]}</strong><small>${kindDescription(kind)}</small></span></div>`).join('')}</div>
+    </section>
+    <section class="how-section" aria-labelledby="how-title">
+      <p class="eyebrow">How it works</p><h2 id="how-title">Review captions in three steps</h2>
+      <ol><li><strong>Import captions</strong><span>Choose an SRT, WebVTT, or JSON project backup.</span></li><li><strong>Review findings</strong><span>See the reason, matching text, and nearby cues.</span></li><li><strong>Export repairs</strong><span>Download captions in their original format or save a JSON backup.</span></li></ol>
+    </section>
+    <section class="limits-section" aria-labelledby="limits-title">
+      <div><p class="eyebrow">Privacy and limits</p><h2 id="limits-title">Your captions stay under your control</h2><p>Caption text is processed in this browser and is not uploaded. Checks are heuristics, not accessibility certification.</p></div>
+      <ul><li>The checker does not create transcripts or host video.</li><li>It does not change caption text until you choose a repair.</li><li>A final watch-through still needs a person.</li></ul>
+    </section>
+    <section class="studio-section" aria-labelledby="studio-section-title">
+      <div><p class="eyebrow">Optional Studio license</p><h2 id="studio-section-title">Share glossaries and export team review history</h2><p><strong>$19 once</strong> for one reviewer. The checker, repairs, caption exports, and project backups stay free.</p></div><button class="secondary-button" id="studio-section-button" type="button">View Studio options</button>
     </section>
   </main>`;
 }
 
 function kindDescription(kind: FindingKind): string {
-  return ({ repeat: 'Back-to-back words or cues', blank: 'Cues without readable words', character: 'Invisible or unsafe code points', speed: 'Reading load and line length', speaker: 'Near-matching speaker labels', glossary: 'Variants of your preferred terms' })[kind];
+  return ({ repeat: 'Repeated words or neighboring cues', blank: 'Cues without readable words', character: 'Hidden or unsupported characters', speed: 'Over 20 characters per second, 42 characters per line, or two lines', speaker: 'Speaker labels within two edits of each other', glossary: 'Listed variants of a preferred term' })[kind];
 }
 
 function workView(): string {
@@ -162,7 +189,7 @@ function workView(): string {
   const finding = currentFinding();
   return `<main id="main" class="workspace">
     <section class="workspace-head" aria-labelledby="page-title">
-      <div><p class="eyebrow">Review specimen</p><h1 id="page-title">${escapeHtml(documentState.name)}</h1><p>${documentState.cues.length} cues · ${documentState.format.toUpperCase()} · <span id="save-status">Saved locally</span></p></div>
+      <div><p class="eyebrow">Caption review</p><h1 id="page-title" tabindex="-1">${escapeHtml(documentState.name)}</h1><p>${documentState.cues.length} cues · ${documentState.format.toUpperCase()} · <span id="save-status">${isDemo ? 'Saved only in the demo sandbox' : 'Saved in this browser'}</span></p></div>
       <div class="document-actions">
         <button class="secondary-button" id="glossary-button" type="button">Glossary <span class="count-dot">${glossary.length}</span></button>
         <button class="secondary-button" id="export-button" type="button">Export ${documentState.format.toUpperCase()}</button>
@@ -239,22 +266,45 @@ function finishedState(): string {
 }
 
 function purchaseControls(): string {
-  return `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
+  return `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio — $19</a><p class="merchant-note">Sociobot/Dodo handles payment and refunds. Read the <a href="/terms/">purchase terms</a>.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
 }
 
 function dialogs(): string {
   return `<dialog id="paste-dialog" aria-labelledby="paste-title"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close paste dialog">×</button><p class="eyebrow">Local import</p><h2 id="paste-title">Paste caption text</h2><label for="paste-name">File name</label><input id="paste-name" value="pasted-captions.srt" /><label for="paste-content">SRT or WebVTT captions</label><textarea id="paste-content" rows="10" placeholder="1&#10;00:00:01,000 --> 00:00:03,000&#10;Caption text"></textarea><p class="form-error" id="paste-error" role="alert"></p><button class="primary-button" id="parse-paste" type="button">Check pasted captions</button></form></dialog>
-  <dialog id="glossary-dialog" aria-labelledby="glossary-title"><div class="dialog-card wide-dialog"><button class="dialog-close" data-close="glossary-dialog" aria-label="Close glossary">×</button><p class="eyebrow">Preferred terms</p><h2 id="glossary-title">Glossary</h2><p>List a preferred spelling and comma-separated variants. Checks update immediately.</p><form id="glossary-form"><label for="preferred-term">Preferred spelling</label><input id="preferred-term" required /><label for="variant-terms">Variants to flag</label><input id="variant-terms" required aria-describedby="variant-help" /><small id="variant-help">Example: bio-char, bio char</small><button class="primary-button" type="submit">Add term</button></form><ul class="glossary-list">${glossary.map((entry) => `<li><span><strong>${escapeHtml(entry.preferred)}</strong><small>${escapeHtml(entry.variants.join(', '))}</small></span><button data-remove-term="${escapeHtml(entry.id)}" type="button" aria-label="Remove ${escapeHtml(entry.preferred)}">Remove</button></li>`).join('') || '<li class="queue-empty">No terms yet.</li>'}</ul><div class="studio-tools"><strong>Portable glossary · Studio</strong><p>Move a shared glossary between devices without an account.</p><button class="secondary-button" id="glossary-import" type="button">Import JSON ${isStudio ? '' : '· Unlock'}</button><button class="text-button" id="glossary-export" type="button">Export JSON ${isStudio ? '' : '· Unlock'}</button><input class="visually-hidden" id="glossary-file" type="file" aria-label="Import glossary JSON" accept="application/json,.json" /></div></div></dialog>
-  <dialog id="studio-dialog" aria-labelledby="studio-title"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio unlock</p><h2 id="studio-title">Keep the field notes moving across your team.</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary files</li><li>Export a portable team review-history CSV</li><li>Free checker, repairs, and caption/project exports stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : purchaseControls()}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
+  <dialog id="glossary-dialog" aria-labelledby="glossary-title"><div class="dialog-card wide-dialog"><button class="dialog-close" data-close="glossary-dialog" aria-label="Close glossary">×</button><p class="eyebrow">Preferred terms</p><h2 id="glossary-title">Glossary</h2><p>List a preferred spelling and comma-separated variants. Findings update after you save the term.</p><form id="glossary-form"><label for="preferred-term">Preferred spelling</label><input id="preferred-term" required /><label for="variant-terms">Variants to flag</label><input id="variant-terms" required aria-describedby="variant-help" /><small id="variant-help">Example: bio-char, bio char</small><button class="primary-button" type="submit">Add term</button></form><ul class="glossary-list">${glossary.map((entry) => `<li><span><strong>${escapeHtml(entry.preferred)}</strong><small>${escapeHtml(entry.variants.join(', '))}</small></span><button data-remove-term="${escapeHtml(entry.id)}" type="button" aria-label="Remove ${escapeHtml(entry.preferred)}">Remove</button></li>`).join('') || '<li class="queue-empty">No terms yet.</li>'}</ul><div class="studio-tools"><strong>Shared glossary · Studio</strong><p>Export a glossary, then import it in another browser without an account.</p><button class="secondary-button" id="glossary-import" type="button">Import glossary JSON ${isStudio ? '' : '· Studio'}</button><button class="text-button" id="glossary-export" type="button">Export glossary JSON ${isStudio ? '' : '· Studio'}</button><input class="visually-hidden" id="glossary-file" type="file" aria-label="Import glossary JSON" accept="application/json,.json" /></div></div></dialog>
+  <dialog id="studio-dialog" aria-labelledby="studio-title"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio license</p><h2 id="studio-title">Share glossaries and export team review history</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary JSON files</li><li>Export team review history as CSV</li><li>The checker, repairs, captions, and project backups stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : purchaseControls()}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
 }
 
 function footer(): string {
-  return `<footer><p>Private by default. Built for the last careful pass.</p><nav aria-label="Legal"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button class="footer-studio" id="footer-studio" type="button">Studio</button></nav><p class="art-credit">Field-guide artwork generated for this product with the factory image model.</p></footer>`;
+  return `<footer><p>Review SRT and WebVTT caption findings in your browser.</p><nav aria-label="Footer"><a href="/?demo=1">Demo</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button class="footer-studio" id="footer-studio" type="button">View Studio options</button></nav><p class="art-credit">Built by Param Factory · ${BUILD_ID} · Original field-guide artwork generated with the factory image model.</p></footer>`;
+}
+
+function demoBanner(): string {
+  if (!isDemo) return '';
+  return `<aside class="demo-banner" aria-label="Demo controls"><strong>Demo — sample data, nothing is saved to your workspace</strong><span>Use the six seeded findings without changing your real captions.</span><div><button id="reset-demo" type="button">Reset demo</button><button id="start-real" type="button">Start for real</button></div></aside>`;
+}
+
+function notFoundView(): string {
+  return `<main id="main" class="not-found"><div aria-hidden="true" class="lost-specimen"><span>404</span></div><p class="eyebrow">Specimen not found</p><h1 id="page-title" tabindex="-1">This page is not in the field guide</h1><p>Check the address, open the checker, or try the sample captions.</p><div><a class="primary-button button-link" href="/">Open the checker</a><a class="secondary-button button-link" href="/?demo=1">Try sample captions</a></div></main>`;
+}
+
+function setRouteMetadata(): void {
+  const title = isNotFound ? 'Page not found — Caption Fix Queue' : isDemo ? DEMO_TITLE : HOME_TITLE;
+  const description = isNotFound ? 'Return to Caption Fix Queue or open its isolated sample.' : isDemo ? 'Try Caption Fix Queue with seven isolated sample cues and six review findings.' : 'Find caption lines that need review before small video teams and community educators publish.';
+  const canonicalPath = isNotFound ? '/404.html' : isDemo ? '/demo' : '/';
+  document.title = title;
+  document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', `https://caption-fix-queue.sociobot.in${canonicalPath}`);
+  for (const selector of ['meta[property="og:title"]', 'meta[name="twitter:title"]']) document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', title);
+  for (const selector of ['meta[property="og:description"]', 'meta[name="twitter:description"]']) document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', `https://caption-fix-queue.sociobot.in${canonicalPath}`);
 }
 
 function render(): void {
-  root.innerHTML = `${header()}${documentState ? workView() : emptyView()}${footer()}${dialogs()}<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div><div class="offline-banner" id="offline-banner" role="status" ${navigator.onLine ? 'hidden' : ''}>Offline — your local checker still works.</div>`;
+  setRouteMetadata();
+  root.innerHTML = `${header()}${demoBanner()}${isNotFound ? notFoundView() : (documentState ? workView() : emptyView())}${footer()}${isNotFound ? '' : dialogs()}<div class="route-status visually-hidden" id="route-status" aria-live="polite" aria-atomic="true"></div><div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div><div class="offline-banner" id="offline-banner" role="status" ${navigator.onLine ? 'hidden' : ''}>Offline — the caption checker, repairs, and exports still work.</div>`;
   bindEvents();
+  if (routeShouldFocus) focusRoute();
 }
 
 function bindEvents(): void {
@@ -262,16 +312,19 @@ function bindEvents(): void {
   document.querySelector('#studio-button')?.addEventListener('click', () => openDialog('studio-dialog'));
   document.querySelector('#footer-studio')?.addEventListener('click', () => openDialog('studio-dialog'));
   document.querySelector('#license-notice-link')?.addEventListener('click', () => openDialog('studio-dialog'));
+  document.querySelector('#studio-section-button')?.addEventListener('click', () => openDialog('studio-dialog'));
+  document.querySelector('#reset-demo')?.addEventListener('click', () => void resetDemo());
+  document.querySelector('#start-real')?.addEventListener('click', () => void startForReal());
   document.querySelectorAll<HTMLElement>('[data-close]').forEach((button) => button.addEventListener('click', () => closeDialog(button.dataset.close ?? '')));
-  if (!documentState) bindEmptyEvents(); else bindWorkspaceEvents();
+  if (!isNotFound && !documentState) bindEmptyEvents(); else if (!isNotFound) bindWorkspaceEvents();
   bindDialogEvents();
 }
 
 function bindEmptyEvents(): void {
   const input = document.querySelector<HTMLInputElement>('#file-input');
   document.querySelector('#choose-file')?.addEventListener('click', () => input?.click());
+  document.querySelector('#choose-file-hero')?.addEventListener('click', () => input?.click());
   input?.addEventListener('change', () => { const file = input.files?.[0]; if (file) void importFile(file); });
-  document.querySelector('#sample-button')?.addEventListener('click', () => importText(SAMPLE, 'garden-workshop-sample.srt'));
   document.querySelector('#paste-button')?.addEventListener('click', () => openDialog('paste-dialog'));
   const zone = document.querySelector<HTMLElement>('#drop-zone');
   zone?.addEventListener('dragover', (event) => { event.preventDefault(); zone.classList.add('dragging'); });
@@ -481,6 +534,7 @@ function focusFindingTitle(): void { requestAnimationFrame(() => { const heading
 function toggleTheme(): void {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = next; localStorage.setItem('caption-theme', next);
+  document.querySelector('#theme-button')?.setAttribute('aria-label', next === 'dark' ? 'Use light theme' : 'Use dark theme');
 }
 
 function applyStoredTheme(): void {
@@ -509,16 +563,50 @@ async function registerServiceWorker(): Promise<void> {
 }
 
 async function initialize(): Promise<void> {
-  applyStoredTheme(); captureReturnedLicense(); isStudio = cachedUnlock();
-  try {
-    const saved = await loadState();
-    if (saved) { documentState = saved.document; statuses = saved.statuses ?? {}; glossary = saved.glossary?.length ? saved.glossary : glossary; reviewHistory = saved.history ?? []; }
-  } catch { /* IndexedDB may be unavailable in strict private browsing. */ }
-  refreshFindings(); render();
+  applyStoredTheme(); captureReturnedLicense(); isStudio = cachedUnlock(); setStorageMode(isDemo);
+  if (!isNotFound) {
+    try {
+      const saved = await loadState();
+      if (saved) { documentState = saved.document; statuses = saved.statuses ?? {}; glossary = saved.glossary?.length ? saved.glossary : glossary; reviewHistory = saved.history ?? []; }
+    } catch { /* IndexedDB may be unavailable in strict private browsing. */ }
+    if (isDemo && !documentState) {
+      documentState = parseCaptions(SAMPLE, 'garden-workshop-sample.srt');
+      statuses = {}; reviewHistory = [];
+      refreshFindings(); scheduleSave();
+    }
+  }
+  refreshFindings(); routeShouldFocus = true; render();
   window.addEventListener('keydown', onKeyboard);
+  window.addEventListener('pageshow', () => focusRoute());
   window.addEventListener('online', () => { document.querySelector<HTMLElement>('#offline-banner')?.setAttribute('hidden', ''); void verifyInBackground(); });
   window.addEventListener('offline', () => document.querySelector<HTMLElement>('#offline-banner')?.removeAttribute('hidden'));
   void registerServiceWorker(); void verifyInBackground();
+  if (new URLSearchParams(window.location.search).get('studio') === '1') requestAnimationFrame(() => openDialog('studio-dialog'));
+}
+
+async function resetDemo(): Promise<void> {
+  if (!isDemo) return;
+  await clearState();
+  glossary = [{ id: 'starter-biochar', preferred: 'biochar', variants: ['bio-char', 'bio char'] }];
+  documentState = parseCaptions(SAMPLE, 'garden-workshop-sample.srt');
+  statuses = {}; reviewHistory = []; selectedId = ''; showResolved = false; editing = false;
+  refreshFindings(); scheduleSave(); routeShouldFocus = true; render(); toast('Demo reset to seven sample cues.');
+}
+
+async function startForReal(): Promise<void> {
+  if (!isDemo) return;
+  await clearState();
+  window.location.assign('/');
+}
+
+function focusRoute(): void {
+  routeShouldFocus = false;
+  requestAnimationFrame(() => {
+    const heading = document.querySelector<HTMLElement>('#page-title');
+    heading?.focus({ preventScroll: true });
+    const status = document.querySelector<HTMLElement>('#route-status');
+    if (status && heading) status.textContent = heading.textContent?.trim() ?? '';
+  });
 }
 
 async function verifyInBackground(): Promise<void> {

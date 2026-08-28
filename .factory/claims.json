@@ -1,0 +1,86 @@
+[
+  {
+    "id": "demo-isolation",
+    "claim": "Demo changes are discarded and never alter the real workspace.",
+    "where": "landing sample action, demo banner, README",
+    "test": "npm run test:claims -- --grep @claim:demo-isolation",
+    "sandbox": "fresh browser; seed a real IndexedDB sentinel, use and reset demo, exit, then compare the real record byte-for-byte"
+  },
+  {
+    "id": "local-processing",
+    "claim": "Caption, glossary, and review-history content stays in browser storage and is not uploaded during free use.",
+    "where": "landing facts, privacy, README",
+    "test": "npm run test:claims -- --grep @claim:local-processing",
+    "sandbox": "fresh demo; intercept the full repair and glossary flow, inspect request bodies, and compare real/demo IndexedDB namespaces"
+  },
+  {
+    "id": "six-checks",
+    "claim": "The checker queues six kinds of possible issue and shows a reason plus matching evidence for each.",
+    "where": "landing checks section, README",
+    "test": "npm run test:claims -- --grep @claim:six-checks",
+    "sandbox": "fresh demo; assert exactly six seeded findings, all six kinds, and non-empty reason/evidence for every finding"
+  },
+  {
+    "id": "explicit-repairs",
+    "claim": "Caption text does not change until the reviewer chooses a repair.",
+    "where": "landing limits, README",
+    "test": "npm run test:claims -- --grep @claim:explicit-repairs",
+    "sandbox": "fresh demo; compare the SRT export before and after one explicit repair"
+  },
+  {
+    "id": "offline-demo",
+    "claim": "The checker, repairs, and exports work offline after the first visit.",
+    "where": "landing facts, offline banner, privacy, README",
+    "test": "npm run test:claims -- --grep @claim:offline-demo",
+    "sandbox": "fresh demo; install worker online, switch browser context offline, reload, repair, and inspect the export"
+  },
+  {
+    "id": "format-roundtrip",
+    "claim": "SRT, WebVTT, and JSON project backups import locally; exports preserve the caption format and WebVTT metadata.",
+    "where": "import panel, how it works, README",
+    "test": "npm run test:claims -- --grep @claim:format-roundtrip",
+    "sandbox": "fresh browser; round-trip SRT and metadata-rich WebVTT, then parse the exported JSON backup"
+  },
+  {
+    "id": "local-persistence",
+    "claim": "Captions, glossary terms, decisions, and review history persist in local storage and Delete local workspace removes them.",
+    "where": "privacy, README",
+    "test": "npm run test:claims -- --grep @claim:local-persistence",
+    "sandbox": "fresh real workspace; create all four state groups, reload and inspect IndexedDB, then delete and assert the key is absent"
+  },
+  {
+    "id": "shared-glossary",
+    "claim": "Studio exports and imports shared glossary JSON between browsers without an account.",
+    "where": "glossary dialog, Studio section, README",
+    "test": "npm run test:claims -- --grep @claim:shared-glossary",
+    "sandbox": "two fresh browser contexts with a mocked valid product license; export in one and import in the other"
+  },
+  {
+    "id": "studio-contract",
+    "claim": "Studio costs $19 once for one reviewer and adds glossary transfer plus team review-history CSV; core exports stay free.",
+    "where": "landing Studio section, Studio dialog, terms, README",
+    "test": "npm run test:claims -- --grep @claim:studio-contract",
+    "sandbox": "fresh demo; verify free caption/project exports, checkout contract, mocked license verification, CSV contents, and 24-hour cache"
+  },
+  {
+    "id": "review-scope",
+    "claim": "The product reviews existing captions; it does not transcribe, host video, or certify accessibility.",
+    "where": "landing limits, terms, README",
+    "test": "npm run test:claims -- --grep @claim:review-scope",
+    "sandbox": "fresh landing and demo; assert limitation copy, absence of video/transcription input, and no certification language in results"
+  },
+  {
+    "id": "static-build",
+    "claim": "Node 20+ and npm run build produce a static dist/index.html; Playwright is pinned to 1.58.2.",
+    "where": "README",
+    "test": "npm run build && npm test -- -t @claim:static-build",
+    "sandbox": "clean checkout after npm ci; run the production build, inspect package contracts, and assert dist/index.html"
+  },
+  {
+    "id": "art-provenance",
+    "claim": "The shipped field-guide artwork is the original factory-generated asset recorded in the visual thesis.",
+    "where": "footer, design document",
+    "test": "npm test -- -t @claim:art-provenance",
+    "sandbox": "clean checkout; compare the shipped WebP SHA-256 and provenance record"
+  }
+]

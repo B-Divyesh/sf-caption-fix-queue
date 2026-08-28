@@ -1,0 +1,1 @@
+Review SRT and WebVTT caption findings locally before publishing.

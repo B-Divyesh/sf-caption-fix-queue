@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:claims": "playwright test tests/e2e/claims.spec.ts --project=chromium"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

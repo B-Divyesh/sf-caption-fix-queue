@@ -1,84 +1,82 @@
 # Caption Fix Queue
 
-Caption Fix Queue is a local, offline-capable review queue for existing SRT and
-WebVTT captions. It helps small video teams and community educators find the few
-lines that merit a human check before publishing, without turning caption review
-into a full editing-suite project.
+Review existing SRT and WebVTT caption files before publishing. Small video
+teams and community educators use the checker to find lines needing a human
+review.
 
 Live product: <https://caption-fix-queue.sociobot.in>
 
+Try the isolated sample at <https://caption-fix-queue.sociobot.in/?demo=1>.
+
 ## What it does
 
-- Parses SRT and WebVTT locally, preserving VTT identifiers, cue settings, notes,
-  style blocks, regions, and header metadata.
-- Queues explainable findings for repeated words/cues, blank cues, unsafe or
-  invisible characters, high reading load, near-matching speaker labels, and
-  glossary variants.
-- Shows the evidence and neighboring cues for every finding. Reviewers can repair
-  text, accept it as-is, or dismiss the flag; nothing is silently rewritten.
-- Saves the current document, glossary, decisions, and review history in IndexedDB.
-- Exports repaired SRT/VTT files and portable JSON project backups for free.
-- Works as an installable PWA after its first online visit, including offline reloads.
+- Imports SRT, WebVTT, and JSON project backups in the browser.
+- Runs six caption checks and explains each finding with matching text.
+- Shows nearby cues for context.
+- Lets reviewers repair text, accept it, or dismiss a finding.
+- Saves captions, glossary terms, decisions, and review history in local storage.
+- Exports repaired captions and JSON project backups for free.
+- Works offline after the first visit, including repair and export.
 
-Studio is an optional $19 one-time reviewer license. It adds portable shared-
-glossary JSON and team review-history CSV exports. Checkout and license verification
-use only the Sociobot billing API; the free checker, repairs, and core data exports
-are never gated.
+The demo has seven cues and six findings. It uses the separate
+`demo:caption-fix-queue` database. Resetting or leaving the demo deletes that
+sample state without changing the real workspace.
+
+Studio costs $19 once for one reviewer. It adds glossary JSON transfer and team
+review-history CSV export. The checker, repairs, captions, and project backups
+stay free.
 
 ## Develop and verify
 
-Requires Node.js 20 or newer.
+Use Node.js 20 or newer.
 
 ```sh
-npm install
+npm ci
 npm run dev
 npm test
 npm run build
 npm run test:e2e
 ```
 
-`npm run build` is the exact deployment command. It writes the static site to
-`dist/`, with `dist/index.html` at its root. Preview the production build with
-`npm run preview`.
+`npm run build` writes the static deployment to `dist/`. Its root file is
+`dist/index.html`. Preview it with `npm run preview`.
 
-Playwright is pinned to 1.58.2. In the factory worker image its browsers are read
-from `PLAYWRIGHT_BROWSERS_PATH`; elsewhere, run `npx playwright install chromium`
-once before the end-to-end suite.
+Playwright is pinned to 1.58.2. The factory image provides its browsers through
+`PLAYWRIGHT_BROWSERS_PATH`. Elsewhere, run `npx playwright install chromium`.
+
+Every public product claim and its test command is listed in
+`.factory/claims.json`. Demo details are in `.factory/demo.md`.
 
 ## Privacy and data ownership
 
-Caption parsing and all checks run in the browser. No captions, glossary terms, or
-review history are sent to a server. There are no analytics, advertising scripts,
-third-party fonts, or runtime CDNs. A Studio license is the only data sent out, and
-only to the Sociobot API for purchase/verification. See `/privacy/` and `/terms/`.
+Caption checks run in the browser. Free use does not upload captions, glossary
+terms, or review history. The app loads no analytics, ads, tracking scripts,
+third-party fonts, or third-party runtime code.
 
-Project backups are plain JSON; repaired captions retain their original SRT or VTT
-format. “Delete local workspace” erases the current IndexedDB record. Clearing site
-data also removes the stored Studio license token.
+Studio purchase and verification use the Sociobot billing API. Verification
+sends the license token, not caption content. Read the [privacy policy](/privacy/)
+and [terms](/terms/).
 
-## Configuration
+Project backups are JSON files. Repaired captions keep their SRT or WebVTT
+format. “Delete local workspace” removes the current workspace record.
 
-Production uses the registered `caption-fix-queue` product at
-`https://api.sociobot.in/api/v1`. Staging can override the host at build time
-without changing a product ID:
+## Configure the billing API
+
+Production uses the `caption-fix-queue` product at
+`https://api.sociobot.in/api/v1`. Set another API base during a staging build:
 
 ```sh
 VITE_BILLING_API=https://pilot-api.sociobot.in/api/v1 npm run build
 ```
 
-The hosted buy link is always the Sociobot billing route. A license token is
-never treated as active until its first verification succeeds; a prior verified
-verdict is retained for offline use and rechecked at most once a day.
+## What Caption Fix Queue does not do
 
-## Scope
+It does not create transcripts, host video, synchronize playback, or make
+factual corrections. Its checks are heuristics and may miss problems or flag
+acceptable text. A person makes the final publishing decision.
 
-This app reviews captions already made. It does not generate transcripts, host
-video, synchronize playback, or make factual corrections. Its checks are deliberate
-heuristics, so the final watch-through and accessibility decision stay with the
-reviewer.
-
-Visual rationale and original-image provenance are in `.factory/design.md`.
-Build verification is recorded in `.factory/handoff.md`.
+The visual rationale and original-image provenance are in
+`.factory/design.md`. Repair evidence is recorded in `.factory/handoff.md`.
 
 ## License
 

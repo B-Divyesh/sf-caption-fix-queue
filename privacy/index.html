@@ -5,30 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#F4F0E5" />
     <meta name="description" content="Privacy policy for Caption Fix Queue." />
+    <link rel="canonical" href="https://caption-fix-queue.sociobot.in/privacy/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Privacy — Caption Fix Queue" />
+    <meta property="og:description" content="Privacy policy for Caption Fix Queue." />
+    <meta property="og:url" content="https://caption-fix-queue.sociobot.in/privacy/" />
+    <meta property="og:image" content="https://caption-fix-queue.sociobot.in/art/social-card.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Privacy — Caption Fix Queue" />
+    <meta name="twitter:description" content="Privacy policy for Caption Fix Queue." />
+    <meta name="twitter:image" content="https://caption-fix-queue.sociobot.in/art/social-card.jpg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Privacy — Caption Fix Queue</title>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to privacy policy</a>
-    <header class="site-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><span></span><span></span></span><span>Caption Fix Queue</span></a><a href="/">Back to checker</a></header>
+    <header class="site-header"><a class="brand" href="/" aria-label="Caption Fix Queue home"><span class="brand-mark" aria-hidden="true"><span></span><span></span></span><span>Caption Fix Queue</span></a><nav class="header-nav" aria-label="Primary"><a href="/?demo=1">Demo</a><a href="/privacy/" aria-current="page">Privacy</a><a href="/?studio=1">View Studio</a><button class="theme-button" id="theme-button" type="button" aria-label="Use dark theme"><span aria-hidden="true">◐</span></button></nav></header>
     <main id="main" class="legal-main">
       <p class="eyebrow">Plain-language policy</p>
-      <h1>Privacy</h1>
-      <p class="legal-lede">Your caption text belongs to you. The checker parses and stores it on your device; it is not sent to Caption Fix Queue or an AI service.</p>
+      <h1 tabindex="-1">Privacy</h1>
+      <p class="legal-lede">The checker processes caption text in your browser. It does not upload captions to Caption Fix Queue or an AI service.</p>
       <h2>What stays local</h2>
-      <p>Imported captions, edits, glossary terms, finding decisions, and review history are stored in your browser’s IndexedDB. Your Studio license token is stored in localStorage. You can export your data or delete the local workspace from the document menu.</p>
+      <p>Imported captions, edits, glossary terms, decisions, and review history use this browser’s local storage (IndexedDB). Your Studio license uses local storage too. Export your data or delete the current workspace from the document menu.</p>
       <h2>What leaves your device</h2>
-      <p>Nothing leaves your device while using the free checker. If you buy or verify Studio, your browser contacts the Sociobot billing API. The license token is sent for verification; caption text and glossary data are not. Hosted checkout is operated by Sociobot/Dodo as merchant of record and is covered by its checkout privacy notice.</p>
+      <p>The free checker sends no caption, glossary, or review-history content. Buying or verifying Studio contacts the Sociobot billing API. Only the license token is sent for verification. Sociobot/Dodo handles payment and provides its privacy notice at checkout.</p>
       <h2>Service worker and logs</h2>
-      <p>The app caches its interface files so it can work offline. The hosting provider may retain short-lived security logs such as an IP address and requested path. Caption Fix Queue includes no behavioral analytics, advertising pixels, third-party fonts, or tracking scripts.</p>
+      <p>The app caches interface files for offline use after the first visit. The host may keep short security logs such as an IP address and path. The app has no analytics, ads, tracking scripts, or services that load code or fonts from other sites.</p>
       <h2>Your choices</h2>
-      <p>Use the export tools to keep a portable copy. Use “Delete local workspace” to erase the current transcript and history. You may also clear this site’s browser storage to remove all local data and a stored license.</p>
+      <p>Use the export tools to keep a downloaded copy. “Delete local workspace” erases the current captions and history. Clearing this site’s browser data removes all work and the stored license.</p>
       <h2>Contact</h2>
       <p>For privacy questions, email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a>.</p>
       <p class="effective">Effective 28 August 2026.</p>
     </main>
-    <footer><p>Private by default.</p><nav aria-label="Legal"><a href="/privacy/" aria-current="page">Privacy</a><a href="/terms/">Terms</a></nav></footer>
+    <footer><p>Review SRT and WebVTT caption findings in your browser.</p><nav aria-label="Footer"><a href="/?demo=1">Demo</a><a href="/privacy/" aria-current="page">Privacy</a><a href="/terms/">Terms</a><a href="/?studio=1">View Studio options</a></nav><p class="art-credit">Built by Param Factory · 1.0.0 · repair 1 · Original field-guide artwork generated with the factory image model.</p></footer>
+    <div id="route-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
     <script type="module" src="/src/legal.ts"></script>
   </body>
 </html>

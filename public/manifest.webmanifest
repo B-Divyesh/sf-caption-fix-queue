@@ -1,8 +1,8 @@
 {
   "name": "Caption Fix Queue",
   "short_name": "Caption Queue",
-  "description": "A private, local review queue for existing SRT and VTT captions.",
-  "start_url": "/?source=installed-v1",
+  "description": "Find possible issues in SRT and WebVTT captions in your browser.",
+  "start_url": "/?source=installed-v2",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F4F0E5",

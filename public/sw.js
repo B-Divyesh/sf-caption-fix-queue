@@ -1,7 +1,7 @@
-const VERSION = 'caption-fix-v7';
+const VERSION = 'caption-fix-v8';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
-const PRECACHE = ['/', '/index.html', '/offline.html', '/privacy/', '/terms/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/art/caption-herbarium.webp'];
+const PRECACHE = ['/', '/index.html', '/demo', '/404.html', '/offline.html', '/privacy/', '/terms/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/art/caption-herbarium.webp', '/art/social-card.jpg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

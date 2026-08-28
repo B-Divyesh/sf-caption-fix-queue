@@ -13,6 +13,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(root, 'index.html'),
+        notFound: resolve(root, '404.html'),
         privacy: resolve(root, 'privacy/index.html'),
         terms: resolve(root, 'terms/index.html'),
         offline: resolve(root, 'offline.html')

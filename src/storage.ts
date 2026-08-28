@@ -1,12 +1,18 @@
 import type { SavedState } from './types';
 
-const DB_NAME = 'caption-fix-queue';
+const REAL_DB_NAME = 'caption-fix-queue';
+const DEMO_DB_NAME = 'demo:caption-fix-queue';
 const STORE_NAME = 'workspace';
 const STATE_KEY = 'current';
+let databaseName = REAL_DB_NAME;
+
+export function setStorageMode(demo: boolean): void {
+  databaseName = demo ? DEMO_DB_NAME : REAL_DB_NAME;
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(databaseName, 1);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORE_NAME)) request.result.createObjectStore(STORE_NAME);
     };
