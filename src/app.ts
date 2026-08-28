@@ -1,0 +1,485 @@
+import './styles.css';
+import { runChecks } from './checks';
+import { captureReturnedLicense, cachedUnlock, checkoutUrl, saveLicense, storedLicense, verifyLicense } from './license';
+import { formatTimestamp, parseCaptions, serializeCaptions } from './parser';
+import { clearState, loadState, saveState } from './storage';
+import type { CaptionDocument, Finding, FindingKind, FindingStatus, GlossaryEntry, ReviewRecord, SavedState } from './types';
+
+const SAMPLE = `1
+00:00:01,000 --> 00:00:03,400
+Welcome to our our garden workshop.
+
+2
+00:00:03,500 --> 00:00:05,100
+MARA: Today we plant native seeds.
+
+3
+00:00:05,200 --> 00:00:06,000
+This demonstration moves quickly and contains far too many words for viewers to comfortably read in less than one second.
+
+4
+00:00:06,100 --> 00:00:08,200
+MARRA: Add bio-char to the soil.
+
+5
+00:00:08,300 --> 00:00:10,000
+Watch for the hidden​ character.
+
+6
+00:00:10,100 --> 00:00:12,000
+
+7
+00:00:12,100 --> 00:00:14,000
+The biochar helps hold moisture.
+`;
+
+const kindLabels: Record<FindingKind, string> = {
+  repeat: 'Repeat', blank: 'Blank run', character: 'Character', speed: 'Reading speed', speaker: 'Speaker', glossary: 'Glossary'
+};
+
+const kindIcons: Record<FindingKind, string> = {
+  repeat: '<path d="M5 9a7 7 0 0 1 12-2l2 2m0-4v4h-4M19 15a7 7 0 0 1-12 2l-2-2m0 4v-4h4"/>',
+  blank: '<path d="M4 7h16M4 17h16M8 12h8"/>',
+  character: '<path d="M12 3v18M5 7h11a4 4 0 0 1 0 8H8"/>',
+  speed: '<path d="M5 18a9 9 0 1 1 14 0M12 12l5-4"/>',
+  speaker: '<path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-2h5m-2-2v4M2 21a6 6 0 0 1 12 0"/>',
+  glossary: '<path d="M4 5a3 3 0 0 1 3-3h13v17H7a3 3 0 0 0-3 3V5Zm0 17h16"/>'
+};
+
+let documentState: CaptionDocument | undefined;
+let statuses: Record<string, FindingStatus> = {};
+let glossary: GlossaryEntry[] = [{ id: 'starter-biochar', preferred: 'biochar', variants: ['bio-char', 'bio char'] }];
+let reviewHistory: ReviewRecord[] = [];
+let findings: Finding[] = [];
+let selectedId = '';
+let showResolved = false;
+let editing = false;
+let isStudio = false;
+let lastAction: { id: string; previous: FindingStatus; historyLength: number } | undefined;
+let saveTimer: number | undefined;
+
+const rootElement = document.querySelector<HTMLDivElement>('#app');
+if (!rootElement) throw new Error('Application root is missing.');
+const root: HTMLDivElement = rootElement;
+
+function icon(kind: FindingKind): string {
+  return `<svg class="finding-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${kindIcons[kind]}</svg>`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
+}
+
+function activeFindings(): Finding[] {
+  return findings.filter((finding) => showResolved || finding.status === 'open');
+}
+
+function currentFinding(): Finding | undefined {
+  const visible = activeFindings();
+  return visible.find((finding) => finding.id === selectedId) ?? visible[0];
+}
+
+function refreshFindings(): void {
+  findings = documentState ? runChecks(documentState, glossary, statuses) : [];
+  const visible = activeFindings();
+  if (!visible.some((finding) => finding.id === selectedId)) selectedId = visible[0]?.id ?? '';
+}
+
+function scheduleSave(): void {
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(async () => {
+    const state: SavedState = { document: documentState, statuses, glossary, history: reviewHistory.slice(-1000), savedAt: Date.now() };
+    try { await saveState(state); } catch { toast('Could not save locally. Export a project backup before closing.', 'warning'); }
+  }, 180);
+}
+
+function header(): string {
+  return `<header class="site-header">
+    <a class="brand" href="/" aria-label="Caption Fix Queue home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span></span>
+      <span>Caption Fix Queue</span>
+    </a>
+    <div class="header-actions">
+      <span class="local-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3m-11 0h12v10H6z"/></svg>Stays on this device</span>
+      <button class="quiet-button" id="theme-button" type="button" aria-label="Change color theme"><span aria-hidden="true">◐</span><span class="wide-label">Theme</span></button>
+      <button class="quiet-button ${isStudio ? 'studio-active' : ''}" id="studio-button" type="button">${isStudio ? 'Studio active' : 'Get Studio'}</button>
+    </div>
+  </header>`;
+}
+
+function emptyView(): string {
+  return `<main id="main" class="empty-main">
+    <section class="intro-copy" aria-labelledby="page-title">
+      <p class="eyebrow">A field check for finished captions</p>
+      <h1 id="page-title">Find the few lines<br><em>worth a closer look.</em></h1>
+      <p class="lede">Drop in an SRT or VTT. You’ll get a short, explainable queue of likely defects—not another full editing suite.</p>
+      <ul class="trust-list" aria-label="Product promises">
+        <li><span aria-hidden="true">✓</span> Nothing uploads</li>
+        <li><span aria-hidden="true">✓</span> No silent rewrites</li>
+        <li><span aria-hidden="true">✓</span> Works offline</li>
+      </ul>
+    </section>
+    <section class="import-plot" id="drop-zone" aria-labelledby="import-title">
+      <picture class="hero-art">
+        <source srcset="/art/caption-herbarium.webp" type="image/webp" />
+        <img src="/art/caption-herbarium.jpg" width="1280" height="853" alt="A pressed maidenhair fern arranged around three blank archival caption strips" fetchpriority="high" decoding="async" />
+      </picture>
+      <div class="import-panel">
+        <span class="specimen-number" aria-hidden="true">PLOT 01</span>
+        <div class="file-glyph" aria-hidden="true"><span>CC</span></div>
+        <h2 id="import-title">Bring in your captions</h2>
+        <p>Drop an <strong>.srt</strong> or <strong>.vtt</strong> here</p>
+        <input class="visually-hidden" id="file-input" type="file" aria-label="Choose an SRT or VTT file" accept=".srt,.vtt,text/vtt,application/x-subrip" />
+        <button class="primary-button" id="choose-file" type="button">Choose a file</button>
+        <div class="import-alternatives"><button class="text-button" id="paste-button" type="button">Paste captions</button><span aria-hidden="true">·</span><button class="text-button" id="sample-button" type="button">Try a sample</button></div>
+        <p class="file-note">SRT or WebVTT · parsed locally in your browser</p>
+      </div>
+    </section>
+    <section class="check-key" aria-labelledby="checks-title">
+      <p class="eyebrow">The field key</p><h2 id="checks-title">Six checks. Each one shows its work.</h2>
+      <div class="check-grid">${(Object.keys(kindLabels) as FindingKind[]).map((kind) => `<div>${icon(kind)}<span><strong>${kindLabels[kind]}</strong><small>${kindDescription(kind)}</small></span></div>`).join('')}</div>
+    </section>
+  </main>`;
+}
+
+function kindDescription(kind: FindingKind): string {
+  return ({ repeat: 'Back-to-back words or cues', blank: 'Cues without readable words', character: 'Invisible or unsafe code points', speed: 'Reading load and line length', speaker: 'Near-matching speaker labels', glossary: 'Variants of your preferred terms' })[kind];
+}
+
+function workView(): string {
+  if (!documentState) return '';
+  const open = findings.filter((finding) => finding.status === 'open').length;
+  const resolved = findings.length - open;
+  const progress = findings.length ? Math.round((resolved / findings.length) * 100) : 100;
+  const finding = currentFinding();
+  return `<main id="main" class="workspace">
+    <section class="workspace-head" aria-labelledby="page-title">
+      <div><p class="eyebrow">Review specimen</p><h1 id="page-title">${escapeHtml(documentState.name)}</h1><p>${documentState.cues.length} cues · ${documentState.format.toUpperCase()} · <span id="save-status">Saved locally</span></p></div>
+      <div class="document-actions">
+        <button class="secondary-button" id="glossary-button" type="button">Glossary <span class="count-dot">${glossary.length}</span></button>
+        <button class="secondary-button" id="export-button" type="button">Export ${documentState.format.toUpperCase()}</button>
+        <button class="menu-button" id="more-button" type="button" aria-expanded="false" aria-controls="more-menu" aria-label="More document actions">•••</button>
+        <div class="more-menu" id="more-menu" hidden>
+          <button id="project-export" type="button">Export project backup</button>
+          <button id="history-export" type="button">Export team history ${isStudio ? '' : '· Studio'}</button>
+          <button id="new-file" type="button">Review another file</button>
+          <button id="delete-workspace" class="danger-text" type="button">Delete local workspace</button>
+        </div>
+      </div>
+    </section>
+    <section class="progress-strip" aria-label="Review progress">
+      <div><strong>${open}</strong><span>to review</span></div><div><strong>${resolved}</strong><span>resolved</span></div>
+      <div class="progress-track"><span style="width:${progress}%"></span></div><span class="progress-value">${progress}%</span>
+    </section>
+    ${findings.length === 0 ? cleanState() : `<div class="review-layout">${queueView()}${finding ? detailView(finding) : finishedState()}</div>`}
+  </main>`;
+}
+
+function queueView(): string {
+  const visible = activeFindings();
+  return `<aside class="queue-panel" aria-labelledby="queue-title">
+    <div class="queue-head"><div><p class="eyebrow">Field index</p><h2 id="queue-title">Findings</h2></div><label class="resolved-toggle"><input id="resolved-toggle" type="checkbox" ${showResolved ? 'checked' : ''}/><span>Show resolved</span></label></div>
+    <ol class="finding-list">${visible.length ? visible.map((finding, index) => {
+      const cueIndex = documentState?.cues.findIndex((cue) => cue.id === finding.cueId) ?? -1;
+      return `<li><button class="finding-row ${finding.id === currentFinding()?.id ? 'selected' : ''} ${finding.status !== 'open' ? 'resolved' : ''}" data-finding="${escapeHtml(finding.id)}" type="button" aria-current="${finding.id === currentFinding()?.id ? 'true' : 'false'}">
+        ${icon(finding.kind)}<span><small>${kindLabels[finding.kind]} · Cue ${cueIndex + 1}</small><strong>${escapeHtml(finding.title)}</strong><em>${finding.status === 'open' ? (finding.severity === 'important' ? 'Important' : 'Check') : finding.status}</em></span><b aria-hidden="true">${index + 1}</b>
+      </button></li>`;
+    }).join('') : '<li class="queue-empty">No findings in this view.</li>'}</ol>
+    <p class="shortcut-note"><kbd>J</kbd>/<kbd>K</kbd> move · <kbd>E</kbd> repair · <kbd>A</kbd> accept · <kbd>D</kbd> dismiss</p>
+  </aside>`;
+}
+
+function detailView(finding: Finding): string {
+  if (!documentState) return '';
+  const cueIndex = documentState.cues.findIndex((cue) => cue.id === finding.cueId);
+  const cue = documentState.cues[cueIndex];
+  if (!cue) return '';
+  const previous = documentState.cues[cueIndex - 1];
+  const next = documentState.cues[cueIndex + 1];
+  return `<section class="detail-panel" aria-labelledby="finding-title">
+    <div class="finding-heading"><span class="kind-mark">${icon(finding.kind)}</span><div><p class="eyebrow">${kindLabels[finding.kind]} · Cue ${cueIndex + 1} of ${documentState.cues.length}</p><h2 id="finding-title">${escapeHtml(finding.title)}</h2></div><span class="severity ${finding.severity}">${finding.severity === 'important' ? 'Important' : 'Check'}</span></div>
+    <div class="explanation"><strong>Why this was flagged</strong><p>${escapeHtml(finding.explanation)}</p><span>${escapeHtml(finding.evidence)}</span></div>
+    <div class="cue-context" aria-label="Caption context">
+      ${previous ? contextCue(previous.text, cueIndex, formatTimestamp(previous.startMs, documentState.format), false) : ''}
+      <article class="cue-card current"><header><span>Flagged cue</span><time>${formatTimestamp(cue.startMs, documentState.format)} → ${formatTimestamp(cue.endMs, documentState.format)}</time></header>
+        ${editing ? `<label for="cue-editor">Caption text</label><textarea id="cue-editor" rows="5">${escapeHtml(cue.text)}</textarea><div class="edit-actions"><button class="primary-button" id="save-repair" type="button">Save repair</button><button class="secondary-button" id="cancel-edit" type="button">Cancel</button></div>` : `<p>${escapeHtml(cue.text) || '<span class="empty-cue">[No readable text]</span>'}</p>`}
+      </article>
+      ${next ? contextCue(next.text, cueIndex + 2, formatTimestamp(next.startMs, documentState.format), false) : ''}
+    </div>
+    ${!editing ? `<div class="resolution-actions">
+      <button class="primary-button" id="repair-button" type="button">Repair text <kbd>E</kbd></button>
+      ${finding.suggestion ? `<button class="suggestion-button" id="apply-suggestion" type="button"><span>Suggested fix</span><strong>${escapeHtml(finding.suggestion)}</strong></button>` : ''}
+      <button class="secondary-button" id="accept-button" type="button">Accept as-is <kbd>A</kbd></button>
+      <button class="text-button dismiss-button" id="dismiss-button" type="button">Dismiss flag <kbd>D</kbd></button>
+    </div>` : ''}
+    <nav class="finding-nav" aria-label="Finding navigation"><button id="previous-finding" type="button">← Previous</button><span>${Math.max(1, activeFindings().findIndex((item) => item.id === finding.id) + 1)} of ${activeFindings().length}</span><button id="next-finding" type="button">Next →</button></nav>
+  </section>`;
+}
+
+function contextCue(text: string, number: number, time: string, _current: boolean): string {
+  return `<article class="cue-card neighbor"><header><span>Cue ${number}</span><time>${time}</time></header><p>${escapeHtml(text) || '[Empty]'}</p></article>`;
+}
+
+function cleanState(): string {
+  return `<section class="completion-state"><span class="completion-leaf" aria-hidden="true">✓</span><p class="eyebrow">Field check complete</p><h2>No likely defects found</h2><p>The six checks found nothing to queue. A human watch-through is still the final authority.</p><button class="primary-button" id="export-button" type="button">Export unchanged ${documentState?.format.toUpperCase()}</button></section>`;
+}
+
+function finishedState(): string {
+  return `<section class="detail-panel completion-state"><span class="completion-leaf" aria-hidden="true">✓</span><p class="eyebrow">Queue resolved</p><h2>Every finding has a decision</h2><p>Export the repaired captions, or show resolved findings to revisit a decision.</p><button class="primary-button" id="export-button-secondary" type="button">Export ${documentState?.format.toUpperCase()}</button></section>`;
+}
+
+function dialogs(): string {
+  return `<dialog id="paste-dialog"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close paste dialog">×</button><p class="eyebrow">Local import</p><h2>Paste caption text</h2><label for="paste-name">File name</label><input id="paste-name" value="pasted-captions.srt" /><label for="paste-content">SRT or WebVTT captions</label><textarea id="paste-content" rows="10" placeholder="1&#10;00:00:01,000 --> 00:00:03,000&#10;Caption text"></textarea><p class="form-error" id="paste-error" role="alert"></p><button class="primary-button" id="parse-paste" type="button">Check pasted captions</button></form></dialog>
+  <dialog id="glossary-dialog"><div class="dialog-card wide-dialog"><button class="dialog-close" data-close="glossary-dialog" aria-label="Close glossary">×</button><p class="eyebrow">Preferred terms</p><h2>Glossary</h2><p>List a preferred spelling and comma-separated variants. Checks update immediately.</p><form id="glossary-form"><label for="preferred-term">Preferred spelling</label><input id="preferred-term" required /><label for="variant-terms">Variants to flag</label><input id="variant-terms" required aria-describedby="variant-help" /><small id="variant-help">Example: bio-char, bio char</small><button class="primary-button" type="submit">Add term</button></form><ul class="glossary-list">${glossary.map((entry) => `<li><span><strong>${escapeHtml(entry.preferred)}</strong><small>${escapeHtml(entry.variants.join(', '))}</small></span><button data-remove-term="${entry.id}" type="button" aria-label="Remove ${escapeHtml(entry.preferred)}">Remove</button></li>`).join('') || '<li class="queue-empty">No terms yet.</li>'}</ul><div class="studio-tools"><strong>Portable glossary · Studio</strong><p>Move a shared glossary between devices without an account.</p><button class="secondary-button" id="glossary-import" type="button">Import JSON ${isStudio ? '' : '· Unlock'}</button><button class="text-button" id="glossary-export" type="button">Export JSON ${isStudio ? '' : '· Unlock'}</button><input class="visually-hidden" id="glossary-file" type="file" accept="application/json,.json" /></div></div></dialog>
+  <dialog id="studio-dialog"><div class="dialog-card studio-dialog"><button class="dialog-close" data-close="studio-dialog" aria-label="Close Studio dialog">×</button><p class="eyebrow">One-time Studio unlock</p><h2>Keep the field notes moving across your team.</h2><p class="price"><strong>$19</strong> once · one reviewer license</p><ul><li>Import and export shared glossary files</li><li>Export a portable team review-history CSV</li><li>Free checker, repairs, and caption/project exports stay free</li></ul>${isStudio ? '<p class="license-good">✓ Studio is active on this device.</p>' : `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio securely</a><p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`}<p class="legal-line"><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></p></div></dialog>`;
+}
+
+function footer(): string {
+  return `<footer><p>Private by default. Built for the last careful pass.</p><nav aria-label="Legal"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button class="footer-studio" id="footer-studio" type="button">Studio</button></nav><p class="art-credit">Field-guide artwork generated for this product with the factory image model.</p></footer>`;
+}
+
+function render(): void {
+  root.innerHTML = `${header()}${documentState ? workView() : emptyView()}${footer()}${dialogs()}<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div><div class="offline-banner" id="offline-banner" role="status" ${navigator.onLine ? 'hidden' : ''}>Offline — your local checker still works.</div>`;
+  bindEvents();
+}
+
+function bindEvents(): void {
+  document.querySelector('#theme-button')?.addEventListener('click', toggleTheme);
+  document.querySelector('#studio-button')?.addEventListener('click', () => openDialog('studio-dialog'));
+  document.querySelector('#footer-studio')?.addEventListener('click', () => openDialog('studio-dialog'));
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((button) => button.addEventListener('click', () => closeDialog(button.dataset.close ?? '')));
+  if (!documentState) bindEmptyEvents(); else bindWorkspaceEvents();
+  bindDialogEvents();
+}
+
+function bindEmptyEvents(): void {
+  const input = document.querySelector<HTMLInputElement>('#file-input');
+  document.querySelector('#choose-file')?.addEventListener('click', () => input?.click());
+  input?.addEventListener('change', () => { const file = input.files?.[0]; if (file) void importFile(file); });
+  document.querySelector('#sample-button')?.addEventListener('click', () => importText(SAMPLE, 'garden-workshop-sample.srt'));
+  document.querySelector('#paste-button')?.addEventListener('click', () => openDialog('paste-dialog'));
+  const zone = document.querySelector<HTMLElement>('#drop-zone');
+  zone?.addEventListener('dragover', (event) => { event.preventDefault(); zone.classList.add('dragging'); });
+  zone?.addEventListener('dragleave', () => zone.classList.remove('dragging'));
+  zone?.addEventListener('drop', (event) => { event.preventDefault(); zone.classList.remove('dragging'); const file = event.dataTransfer?.files[0]; if (file) void importFile(file); });
+}
+
+function bindWorkspaceEvents(): void {
+  document.querySelectorAll<HTMLButtonElement>('[data-finding]').forEach((button) => button.addEventListener('click', () => { selectedId = button.dataset.finding ?? ''; editing = false; render(); focusFindingTitle(); }));
+  const resolvedToggle = document.querySelector<HTMLInputElement>('#resolved-toggle');
+  resolvedToggle?.addEventListener('change', () => { showResolved = resolvedToggle.checked; refreshFindings(); render(); });
+  document.querySelector('#repair-button')?.addEventListener('click', startEditing);
+  document.querySelector('#cancel-edit')?.addEventListener('click', () => { editing = false; render(); focusFindingTitle(); });
+  document.querySelector('#save-repair')?.addEventListener('click', saveRepair);
+  document.querySelector('#apply-suggestion')?.addEventListener('click', applySuggestion);
+  document.querySelector('#accept-button')?.addEventListener('click', () => resolveFinding('accepted'));
+  document.querySelector('#dismiss-button')?.addEventListener('click', () => resolveFinding('dismissed'));
+  document.querySelector('#previous-finding')?.addEventListener('click', () => moveFinding(-1));
+  document.querySelector('#next-finding')?.addEventListener('click', () => moveFinding(1));
+  document.querySelectorAll('#export-button, #export-button-secondary').forEach((button) => button.addEventListener('click', exportCaptions));
+  document.querySelector('#glossary-button')?.addEventListener('click', () => openDialog('glossary-dialog'));
+  const moreButton = document.querySelector<HTMLButtonElement>('#more-button');
+  const moreMenu = document.querySelector<HTMLElement>('#more-menu');
+  moreButton?.addEventListener('click', () => { if (moreMenu) moreMenu.hidden = !moreMenu.hidden; moreButton.setAttribute('aria-expanded', String(!moreMenu?.hidden)); });
+  document.querySelector('#project-export')?.addEventListener('click', exportProject);
+  document.querySelector('#history-export')?.addEventListener('click', () => { if (isStudio) exportHistory(); else openDialog('studio-dialog'); });
+  document.querySelector('#new-file')?.addEventListener('click', newFile);
+  document.querySelector('#delete-workspace')?.addEventListener('click', deleteWorkspace);
+}
+
+function bindDialogEvents(): void {
+  document.querySelector('#parse-paste')?.addEventListener('click', () => {
+    const name = document.querySelector<HTMLInputElement>('#paste-name')?.value || 'pasted-captions.srt';
+    const content = document.querySelector<HTMLTextAreaElement>('#paste-content')?.value || '';
+    try { importText(content, name); closeDialog('paste-dialog'); } catch (error) { setError('paste-error', messageFor(error)); }
+  });
+  document.querySelector('#glossary-form')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const preferred = document.querySelector<HTMLInputElement>('#preferred-term')?.value.trim() ?? '';
+    const variants = (document.querySelector<HTMLInputElement>('#variant-terms')?.value ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+    if (!preferred || !variants.length) return;
+    glossary.push({ id: `${Date.now()}`, preferred, variants }); refreshFindings(); scheduleSave(); render(); openDialog('glossary-dialog'); toast(`Added “${preferred}” to the glossary.`);
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-remove-term]').forEach((button) => button.addEventListener('click', () => { glossary = glossary.filter((entry) => entry.id !== button.dataset.removeTerm); refreshFindings(); scheduleSave(); render(); openDialog('glossary-dialog'); }));
+  document.querySelector('#glossary-import')?.addEventListener('click', () => isStudio ? document.querySelector<HTMLInputElement>('#glossary-file')?.click() : openDialog('studio-dialog'));
+  document.querySelector('#glossary-export')?.addEventListener('click', () => isStudio ? download('caption-glossary.json', JSON.stringify({ version: 1, glossary }, null, 2), 'application/json') : openDialog('studio-dialog'));
+  document.querySelector<HTMLInputElement>('#glossary-file')?.addEventListener('change', (event) => void importGlossary((event.currentTarget as HTMLInputElement).files?.[0]));
+  document.querySelector('#restore-license')?.addEventListener('click', restoreLicense);
+}
+
+async function importFile(file: File): Promise<void> {
+  if (!/\.(srt|vtt)$/i.test(file.name) && !['text/vtt', 'application/x-subrip', 'text/plain'].includes(file.type)) { toast('Choose an SRT or VTT caption file.', 'warning'); return; }
+  if (file.size > 5_000_000) { toast('That file is over 5 MB. Split it into a smaller caption file first.', 'warning'); return; }
+  try { importText(await file.text(), file.name); } catch (error) { toast(messageFor(error), 'warning'); }
+}
+
+function importText(text: string, name: string): void {
+  const parsed = parseCaptions(text, name);
+  documentState = parsed; statuses = {}; reviewHistory = []; showResolved = false; editing = false; refreshFindings(); scheduleSave(); render();
+  requestAnimationFrame(() => document.querySelector('#page-title')?.scrollIntoView());
+  toast(`${parsed.cues.length} cues checked. ${findings.length} finding${findings.length === 1 ? '' : 's'} queued.`);
+}
+
+function resolveFinding(status: 'accepted' | 'dismissed'): void {
+  const finding = currentFinding();
+  if (!finding || !documentState) return;
+  lastAction = { id: finding.id, previous: statuses[finding.id] ?? 'open', historyLength: reviewHistory.length };
+  statuses[finding.id] = status;
+  reviewHistory.push({ id: `${Date.now()}-${finding.id}`, documentName: documentState.name, cueId: finding.cueId, findingKind: finding.kind, action: status, at: Date.now() });
+  refreshFindings(); scheduleSave(); render(); toast(`Finding ${status}.`, 'normal', true);
+}
+
+function startEditing(): void { editing = true; render(); requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#cue-editor')?.focus()); }
+
+function saveRepair(): void {
+  const value = document.querySelector<HTMLTextAreaElement>('#cue-editor')?.value;
+  if (value === undefined) return;
+  repairWith(value);
+}
+
+function applySuggestion(): void { const finding = currentFinding(); if (finding?.suggestion !== undefined) repairWith(finding.suggestion); }
+
+function repairWith(text: string): void {
+  const finding = currentFinding();
+  const cue = documentState?.cues.find((item) => item.id === finding?.cueId);
+  if (!finding || !cue || !documentState) return;
+  lastAction = { id: finding.id, previous: statuses[finding.id] ?? 'open', historyLength: reviewHistory.length };
+  cue.text = text; documentState.updatedAt = Date.now(); statuses[finding.id] = 'repaired';
+  reviewHistory.push({ id: `${Date.now()}-${finding.id}`, documentName: documentState.name, cueId: finding.cueId, findingKind: finding.kind, action: 'repaired', at: Date.now() });
+  editing = false; refreshFindings(); scheduleSave(); render(); toast('Repair saved and all checks rerun.', 'normal', true);
+}
+
+function undoLast(): void {
+  if (!lastAction) return;
+  statuses[lastAction.id] = lastAction.previous;
+  reviewHistory = reviewHistory.slice(0, lastAction.historyLength);
+  selectedId = lastAction.id; lastAction = undefined; refreshFindings(); scheduleSave(); render(); toast('Decision undone.');
+}
+
+function moveFinding(direction: number): void {
+  const visible = activeFindings();
+  if (!visible.length) return;
+  const index = Math.max(0, visible.findIndex((finding) => finding.id === currentFinding()?.id));
+  selectedId = visible[(index + direction + visible.length) % visible.length]?.id ?? selectedId; editing = false; render(); focusFindingTitle();
+}
+
+function exportCaptions(): void {
+  if (!documentState) return;
+  download(documentState.name, serializeCaptions(documentState), documentState.format === 'vtt' ? 'text/vtt' : 'application/x-subrip');
+  toast('Caption file exported.');
+}
+
+function exportProject(): void {
+  download(`${documentState?.name ?? 'captions'}.caption-fix.json`, JSON.stringify({ version: 1, document: documentState, statuses, glossary, history: reviewHistory, exportedAt: new Date().toISOString() }, null, 2), 'application/json');
+}
+
+function exportHistory(): void {
+  const rows = [['document', 'cue_id', 'finding', 'action', 'timestamp'], ...reviewHistory.map((record) => [record.documentName, record.cueId, record.findingKind, record.action, new Date(record.at).toISOString()])];
+  download('caption-review-history.csv', rows.map((row) => row.map(csvCell).join(',')).join('\n'), 'text/csv');
+}
+
+function csvCell(value: string): string { return `"${value.replaceAll('"', '""')}"`; }
+
+async function importGlossary(file?: File): Promise<void> {
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text()) as { glossary?: GlossaryEntry[] };
+    if (!Array.isArray(data.glossary) || data.glossary.some((entry) => !entry.preferred || !Array.isArray(entry.variants))) throw new Error('invalid');
+    glossary = data.glossary.map((entry, index) => ({ id: entry.id || `imported-${index}`, preferred: String(entry.preferred), variants: entry.variants.map(String) }));
+    refreshFindings(); scheduleSave(); render(); openDialog('glossary-dialog'); toast(`Imported ${glossary.length} glossary terms.`);
+  } catch { toast('That JSON file is not a Caption Fix Queue glossary.', 'warning'); }
+}
+
+function download(name: string, content: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
+  const anchor = Object.assign(document.createElement('a'), { href: url, download: name }); anchor.click(); URL.revokeObjectURL(url);
+}
+
+function newFile(): void {
+  if (!confirm('Review another file? Your current work is saved locally and can be exported first.')) return;
+  documentState = undefined; statuses = {}; findings = []; selectedId = ''; render();
+}
+
+async function deleteWorkspace(): Promise<void> {
+  if (!confirm(`Delete the local workspace for “${documentState?.name}”? Exported files will not be affected. This cannot be undone.`)) return;
+  await clearState(); documentState = undefined; statuses = {}; reviewHistory = []; findings = []; selectedId = ''; render(); toast('Local workspace deleted.');
+}
+
+async function restoreLicense(): Promise<void> {
+  const input = document.querySelector<HTMLInputElement>('#license-token');
+  const token = input?.value.trim() ?? '';
+  if (!token) { setError('license-error', 'Paste the license token from your receipt.'); return; }
+  saveLicense(token); const result = await verifyLicense(true);
+  if (result.valid) { isStudio = true; render(); toast('Studio restored on this device.'); }
+  else { isStudio = false; setError('license-error', result.reason === 'offline' ? 'Could not reach the license service. Check your connection and try again.' : 'That license is not active for this product.'); }
+}
+
+function openDialog(id: string): void {
+  const dialog = document.querySelector<HTMLDialogElement>(`#${id}`);
+  if (dialog && !dialog.open) dialog.showModal();
+}
+
+function closeDialog(id: string): void { document.querySelector<HTMLDialogElement>(`#${id}`)?.close(); }
+function setError(id: string, message: string): void { const node = document.querySelector(`#${id}`); if (node) node.textContent = message; }
+function messageFor(error: unknown): string { return error instanceof Error ? error.message : 'That caption file could not be read.'; }
+
+function toast(message: string, tone: 'normal' | 'warning' = 'normal', undo = false): void {
+  const region = document.querySelector('#toast-region');
+  if (!region) return;
+  region.innerHTML = `<div class="toast ${tone}"><span>${escapeHtml(message)}</span>${undo ? '<button id="undo-action" type="button">Undo</button>' : ''}</div>`;
+  document.querySelector('#undo-action')?.addEventListener('click', undoLast);
+  window.setTimeout(() => { if (region.textContent?.includes(message)) region.innerHTML = ''; }, 5000);
+}
+
+function focusFindingTitle(): void { requestAnimationFrame(() => { const heading = document.querySelector<HTMLElement>('#finding-title'); heading?.setAttribute('tabindex', '-1'); heading?.focus(); }); }
+
+function toggleTheme(): void {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next; localStorage.setItem('caption-theme', next);
+}
+
+function applyStoredTheme(): void {
+  const stored = localStorage.getItem('caption-theme');
+  if (stored === 'dark' || stored === 'light') document.documentElement.dataset.theme = stored;
+}
+
+function onKeyboard(event: KeyboardEvent): void {
+  if (!documentState || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || /INPUT|TEXTAREA|SELECT/.test((event.target as HTMLElement).tagName) || document.querySelector('dialog[open]')) return;
+  if (event.key.toLowerCase() === 'j') { event.preventDefault(); moveFinding(1); }
+  if (event.key.toLowerCase() === 'k') { event.preventDefault(); moveFinding(-1); }
+  if (event.key.toLowerCase() === 'e' && currentFinding()) { event.preventDefault(); startEditing(); }
+  if (event.key.toLowerCase() === 'a' && currentFinding()) { event.preventDefault(); resolveFinding('accepted'); }
+  if (event.key.toLowerCase() === 'd' && currentFinding()) { event.preventDefault(); resolveFinding('dismissed'); }
+}
+
+async function registerServiceWorker(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      worker?.addEventListener('statechange', () => { if (worker.state === 'installed' && navigator.serviceWorker.controller) toast('A fresh field guide is ready. Reload to update.'); });
+    });
+  } catch { /* App remains fully usable without installation support. */ }
+}
+
+async function initialize(): Promise<void> {
+  applyStoredTheme(); captureReturnedLicense(); isStudio = cachedUnlock();
+  try {
+    const saved = await loadState();
+    if (saved) { documentState = saved.document; statuses = saved.statuses ?? {}; glossary = saved.glossary?.length ? saved.glossary : glossary; reviewHistory = saved.history ?? []; }
+  } catch { /* IndexedDB may be unavailable in strict private browsing. */ }
+  refreshFindings(); render();
+  window.addEventListener('keydown', onKeyboard);
+  window.addEventListener('online', () => { document.querySelector<HTMLElement>('#offline-banner')?.setAttribute('hidden', ''); void verifyInBackground(); });
+  window.addEventListener('offline', () => document.querySelector<HTMLElement>('#offline-banner')?.removeAttribute('hidden'));
+  void registerServiceWorker(); void verifyInBackground();
+}
+
+async function verifyInBackground(): Promise<void> {
+  if (!storedLicense()) return;
+  const verdict = await verifyLicense();
+  if (verdict.valid !== isStudio && verdict.reason !== 'offline') { isStudio = verdict.valid; render(); if (!verdict.valid) toast('Studio license is no longer active. Free features are unchanged.', 'warning'); }
+}
+
+void initialize();

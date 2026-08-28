@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Caption strips and a fern leaf">
+  <rect width="512" height="512" rx="96" fill="#f4f0e5"/>
+  <path d="M88 142h336v74H88zm0 154h336v74H88z" fill="#fffdf6" stroke="#173c2a" stroke-width="18"/>
+  <path d="M256 405c2-115 23-211 98-291M286 281c50 5 86-13 111-52m-103 7c-36-13-55-42-58-79m79 35c38-4 61-25 72-58m-42 16c-27-7-39-24-41-50" fill="none" stroke="#245b3d" stroke-width="18" stroke-linecap="round"/>
+  <path d="M376 119c-1 31-13 51-36 60m64-38c-2 25-13 42-33 51m-123-48c27 6 45 23 54 50m-54-12c24 8 37 24 41 48" fill="none" stroke="#d8a632" stroke-width="15" stroke-linecap="round"/>
+</svg>

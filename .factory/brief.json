@@ -1,0 +1,9 @@
+{
+  "slug": "caption-fix-queue",
+  "title": "Caption Fix Queue",
+  "artifact_class": "pwa-offline",
+  "user": "Small video teams and community educators reviewing existing SRT/VTT captions before publishing.",
+  "smallest_useful_product": "A local drag-and-drop SRT/VTT checker that flags improbable repeats, blank runs, unsupported characters, long reading-speed cues, inconsistent speaker names, and glossary mismatches; reviewers accept, dismiss, or repair each flag.",
+  "constraints": "All parsing is local; checks are explainable and never silently rewrite transcript text.",
+  "monetization": "freemium — free local checker; one-time Studio unlock for shared glossary files and team review-history export."
+}
