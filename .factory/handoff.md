@@ -52,6 +52,23 @@ Fresh clone: `/tmp/caption-fix-queue-clean.oYuitP` at
   SEO 100; LCP 1.8 s, CLS 0, TBT 100 ms.
 - Social card inspected at 1200×630; touch icon inspected at 180×180.
 
+## Deployment evidence
+
+- Pushed repair and evidence commits through `53802f5` to `origin/main`.
+- Deployed `/work/repo/dist` with
+  `/opt/fleet/lib/deploy-static.sh caption-fix-queue /work/repo/dist`.
+- Azure Static Web Apps deployment ID:
+  `3fed9173-6796-405c-bc68-3b40286dea86`; status `Succeeded`.
+- Live root, `/demo`, `/privacy/`, `/terms/`, `/robots.txt`, `/sitemap.xml`,
+  manifest, social card, and touch icon all returned HTTP 200.
+- A live unknown path returned HTTP 404 and the designed recovery page.
+- Live `/demo` title is `Demo — Caption Fix Queue`; the persistent demo banner
+  and all six findings rendered in a fresh browser.
+- Live service-worker smoke test reloaded `/demo` offline and displayed the
+  offline status. Browser console and page-error capture remained empty.
+- Live security headers include the configured CSP, Permissions-Policy,
+  Referrer-Policy, X-Content-Type-Options, and X-Frame-Options.
+
 ## Run it
 
 ```sh
@@ -66,6 +83,6 @@ site with `npm run preview` and open `http://127.0.0.1:4173/?demo=1`.
 
 ## Known gaps and next steps
 
-No blocking or known product defect remains from review 1. The release step is
-to push these commits, deploy `dist/` through the static work-order helper, and
-record the live URL check below.
+No blocking or known product defect remains from review 1. The repaired static
+artifact is deployed at <https://caption-fix-queue.sociobot.in>. A later round
+can monitor real-world browser feedback without carrying acceptance debt.
