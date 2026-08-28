@@ -2,36 +2,38 @@
   "communities": {
     "0": [
       "src_app",
-      "src_app_applystoredtheme",
+      "src_app_activefindings",
+      "src_app_cleanstate",
+      "src_app_contextcue",
       "src_app_csvcell",
+      "src_app_currentfinding",
+      "src_app_detailview",
       "src_app_dialogs",
       "src_app_download",
+      "src_app_emptyview",
+      "src_app_escapehtml",
       "src_app_exportcaptions",
       "src_app_exporthistory",
       "src_app_exportproject",
       "src_app_findings",
+      "src_app_finishedstate",
       "src_app_footer",
       "src_app_glossary",
       "src_app_header",
-      "src_app_initialize",
+      "src_app_icon",
+      "src_app_kinddescription",
       "src_app_kindicons",
       "src_app_kindlabels",
       "src_app_lastaction",
+      "src_app_movefinding",
+      "src_app_onkeyboard",
       "src_app_purchasecontrols",
-      "src_app_registerserviceworker",
+      "src_app_queueview",
       "src_app_reviewhistory",
       "src_app_rootelement",
       "src_app_statuses",
-      "src_app_verifyinbackground",
-      "src_license",
-      "src_license_cachedunlock",
-      "src_license_cachedverdict",
-      "src_license_capturereturnedlicense",
-      "src_license_checkouturl",
-      "src_license_savelicense",
-      "src_license_storedlicense",
-      "src_license_studiocheckoutavailable",
-      "src_license_verifylicense"
+      "src_app_workview",
+      "src_license_checkouturl"
     ],
     "1": [
       "src_app_applysuggestion",
@@ -143,20 +145,20 @@
       "tsconfig_include"
     ],
     "5": [
-      "src_app_activefindings",
-      "src_app_cleanstate",
-      "src_app_contextcue",
-      "src_app_currentfinding",
-      "src_app_detailview",
-      "src_app_emptyview",
-      "src_app_escapehtml",
-      "src_app_finishedstate",
-      "src_app_icon",
-      "src_app_kinddescription",
-      "src_app_movefinding",
-      "src_app_onkeyboard",
-      "src_app_queueview",
-      "src_app_workview"
+      "src_app_applystoredtheme",
+      "src_app_initialize",
+      "src_app_registerserviceworker",
+      "src_app_verifyinbackground",
+      "src_license",
+      "src_license_cachedunlock",
+      "src_license_cachedverdict",
+      "src_license_capturereturnedlicense",
+      "src_license_clearverdict",
+      "src_license_savelicense",
+      "src_license_storedlicense",
+      "src_license_verifylicense",
+      "tests_license_test",
+      "tests_license_test_installbrowser"
     ],
     "6": [
       "src_storage",
@@ -192,12 +194,12 @@
     ]
   },
   "cohesion": {
-    "0": 0.11827956989247312,
+    "0": 0.11742424242424243,
     "1": 0.2022792022792023,
     "2": 0.16307692307692306,
     "3": 0.08333333333333333,
     "4": 0.08333333333333333,
-    "5": 0.24175824175824176,
+    "5": 0.2857142857142857,
     "6": 0.5333333333333333,
     "7": 1.0,
     "8": 1.0,
@@ -224,13 +226,13 @@
       "degree": 16
     },
     {
-      "id": "src_app_binddialogevents",
-      "label": "bindDialogEvents()",
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
       "degree": 14
     },
     {
-      "id": "tsconfig_compileroptions",
-      "label": "compilerOptions",
+      "id": "src_app_binddialogevents",
+      "label": "bindDialogEvents()",
       "degree": 14
     },
     {
@@ -244,25 +246,36 @@
       "degree": 11
     },
     {
-      "id": "src_app_initialize",
-      "label": "initialize()",
-      "degree": 10
-    },
-    {
       "id": "src_app_schedulesave",
       "label": "scheduleSave()",
       "degree": 10
     },
     {
-      "id": "src_app_importtext",
-      "label": "importText()",
+      "id": "src_app_initialize",
+      "label": "initialize()",
+      "degree": 10
+    },
+    {
+      "id": "src_app_currentfinding",
+      "label": "currentFinding()",
       "degree": 9
     }
   ],
   "surprises": [
     {
-      "source": "exportCaptions()",
-      "target": "serializeCaptions()",
+      "source": "refreshFindings()",
+      "target": "runChecks()",
+      "source_files": [
+        "src/app.ts",
+        "src/checks.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "detailView()",
+      "target": "formatTimestamp()",
       "source_files": [
         "src/app.ts",
         "src/parser.ts"
@@ -272,33 +285,22 @@
       "why": "bridges separate communities"
     },
     {
-      "source": "initialize()",
-      "target": "loadState()",
+      "source": "importText()",
+      "target": "parseCaptions()",
       "source_files": [
         "src/app.ts",
-        "src/storage.ts"
+        "src/parser.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
       "why": "bridges separate communities"
     },
     {
-      "source": "restoreLicense()",
-      "target": "saveLicense()",
+      "source": "exportCaptions()",
+      "target": "serializeCaptions()",
       "source_files": [
         "src/app.ts",
-        "src/license.ts"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
-      "source": "restoreLicense()",
-      "target": "verifyLicense()",
-      "source_files": [
-        "src/app.ts",
-        "src/license.ts"
+        "src/parser.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
