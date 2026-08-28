@@ -1,65 +1,6 @@
 {
   "communities": {
     "0": [
-      "src_app",
-      "src_app_activefindings",
-      "src_app_cleanstate",
-      "src_app_contextcue",
-      "src_app_currentfinding",
-      "src_app_detailview",
-      "src_app_dialogs",
-      "src_app_emptyview",
-      "src_app_escapehtml",
-      "src_app_findings",
-      "src_app_finishedstate",
-      "src_app_footer",
-      "src_app_glossary",
-      "src_app_header",
-      "src_app_icon",
-      "src_app_kinddescription",
-      "src_app_kindicons",
-      "src_app_kindlabels",
-      "src_app_lastaction",
-      "src_app_movefinding",
-      "src_app_onkeyboard",
-      "src_app_purchasecontrols",
-      "src_app_queueview",
-      "src_app_reviewhistory",
-      "src_app_rootelement",
-      "src_app_statuses",
-      "src_app_workview",
-      "src_license_checkouturl"
-    ],
-    "1": [
-      "src_app_applysuggestion",
-      "src_app_binddialogevents",
-      "src_app_bindemptyevents",
-      "src_app_bindevents",
-      "src_app_bindworkspaceevents",
-      "src_app_closedialog",
-      "src_app_deleteworkspace",
-      "src_app_focusfindingtitle",
-      "src_app_importfile",
-      "src_app_importglossary",
-      "src_app_importproject",
-      "src_app_importtext",
-      "src_app_messagefor",
-      "src_app_newfile",
-      "src_app_opendialog",
-      "src_app_refreshfindings",
-      "src_app_render",
-      "src_app_repairwith",
-      "src_app_resolvefinding",
-      "src_app_restorelicense",
-      "src_app_saverepair",
-      "src_app_schedulesave",
-      "src_app_seterror",
-      "src_app_startediting",
-      "src_app_toast",
-      "src_app_toggletheme",
-      "src_app_undolast"
-    ],
-    "2": [
       "src_checks",
       "src_checks_escaperegexp",
       "src_checks_key",
@@ -85,9 +26,13 @@
       "src_types_glossaryentry",
       "src_types_reviewrecord",
       "tests_checks_test",
+      "tests_e2e_claims_spec",
+      "tests_e2e_claims_spec_downloadtext",
+      "tests_e2e_claims_spec_readworkspace",
+      "tests_e2e_claims_spec_unlockstudio",
       "tests_parser_test"
     ],
-    "3": [
+    "1": [
       "axe_core_playwright",
       "package",
       "package_devdependencies",
@@ -97,6 +42,8 @@
       "package_devdependencies_typescript",
       "package_devdependencies_vite",
       "package_devdependencies_vitest",
+      "package_engines",
+      "package_engines_node",
       "package_name",
       "package_private",
       "package_scripts",
@@ -104,6 +51,7 @@
       "package_scripts_dev",
       "package_scripts_preview",
       "package_scripts_test",
+      "package_scripts_test_claims",
       "package_scripts_test_e2e",
       "package_type",
       "package_version",
@@ -113,7 +61,7 @@
       "vite",
       "vitest"
     ],
-    "4": [
+    "2": [
       "ref_dom",
       "ref_dom_iterable",
       "ref_es2022",
@@ -139,8 +87,52 @@
       "tsconfig_compileroptions_usedefineforclassfields",
       "tsconfig_include"
     ],
+    "3": [
+      "src_app",
+      "src_app_applysuggestion",
+      "src_app_bindworkspaceevents",
+      "src_app_csvcell",
+      "src_app_deleteworkspace",
+      "src_app_download",
+      "src_app_exportcaptions",
+      "src_app_exporthistory",
+      "src_app_exportproject",
+      "src_app_findings",
+      "src_app_focusfindingtitle",
+      "src_app_glossary",
+      "src_app_kindicons",
+      "src_app_kindlabels",
+      "src_app_lastaction",
+      "src_app_newfile",
+      "src_app_repairwith",
+      "src_app_reviewhistory",
+      "src_app_rootelement",
+      "src_app_saverepair",
+      "src_app_startediting",
+      "src_app_statuses"
+    ],
+    "4": [
+      "src_app_activefindings",
+      "src_app_cleanstate",
+      "src_app_contextcue",
+      "src_app_currentfinding",
+      "src_app_detailview",
+      "src_app_dialogs",
+      "src_app_emptyview",
+      "src_app_escapehtml",
+      "src_app_finishedstate",
+      "src_app_icon",
+      "src_app_kinddescription",
+      "src_app_movefinding",
+      "src_app_onkeyboard",
+      "src_app_purchasecontrols",
+      "src_app_queueview",
+      "src_app_workview",
+      "src_license_checkouturl"
+    ],
     "5": [
       "src_app_applystoredtheme",
+      "src_app_focusroute",
       "src_app_initialize",
       "src_app_registerserviceworker",
       "src_app_verifyinbackground",
@@ -152,15 +144,43 @@
       "src_license_savelicense",
       "src_license_storedlicense",
       "src_license_verifylicense",
+      "src_storage_setstoragemode",
       "tests_license_test",
       "tests_license_test_installbrowser"
     ],
     "6": [
-      "src_app_csvcell",
-      "src_app_download",
-      "src_app_exportcaptions",
-      "src_app_exporthistory",
-      "src_app_exportproject",
+      "src_app_binddialogevents",
+      "src_app_bindemptyevents",
+      "src_app_bindevents",
+      "src_app_closedialog",
+      "src_app_messagefor",
+      "src_app_opendialog",
+      "src_app_restorelicense",
+      "src_app_seterror",
+      "src_app_startforreal",
+      "src_app_toggletheme"
+    ],
+    "7": [
+      "src_app_importfile",
+      "src_app_importglossary",
+      "src_app_importproject",
+      "src_app_importtext",
+      "src_app_refreshfindings",
+      "src_app_resetdemo",
+      "src_app_resolvefinding",
+      "src_app_schedulesave",
+      "src_app_toast",
+      "src_app_undolast"
+    ],
+    "8": [
+      "src_app_demobanner",
+      "src_app_footer",
+      "src_app_header",
+      "src_app_notfoundview",
+      "src_app_render",
+      "src_app_setroutemetadata"
+    ],
+    "9": [
       "src_storage",
       "src_storage_clearstate",
       "src_storage_loadstate",
@@ -168,52 +188,61 @@
       "src_storage_savestate",
       "src_types_savedstate"
     ],
-    "7": [
+    "10": [
+      "src_legal",
+      "src_legal_focusroute",
+      "src_legal_theme",
+      "src_legal_themebutton"
+    ],
+    "11": [
       "public_sw",
       "public_sw_precache"
     ],
-    "8": [
-      "src_legal",
-      "src_legal_theme"
-    ],
-    "9": [
+    "12": [
       "vite_config",
       "vite_config_root"
     ],
-    "10": [
+    "13": [
       "playwright_config"
     ],
-    "11": [
+    "14": [
       "tests_deployment_config_test"
     ],
-    "12": [
+    "15": [
       "tests_e2e_app_spec"
     ],
-    "13": [
+    "16": [
+      "tests_factory_claims_test"
+    ],
+    "17": [
       "vitest_config"
     ]
   },
   "cohesion": {
-    "0": 0.1402116402116402,
-    "1": 0.2022792022792023,
-    "2": 0.16307692307692306,
-    "3": 0.08333333333333333,
-    "4": 0.08333333333333333,
-    "5": 0.2857142857142857,
-    "6": 0.21818181818181817,
-    "7": 1.0,
-    "8": 1.0,
-    "9": 1.0,
-    "10": 1.0,
+    "0": 0.13793103448275862,
+    "1": 0.07407407407407407,
+    "2": 0.08333333333333333,
+    "3": 0.15584415584415584,
+    "4": 0.19117647058823528,
+    "5": 0.23333333333333334,
+    "6": 0.28888888888888886,
+    "7": 0.4888888888888889,
+    "8": 0.3333333333333333,
+    "9": 0.5333333333333333,
+    "10": 0.5,
     "11": 1.0,
     "12": 1.0,
-    "13": 1.0
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0
   },
   "gods": [
     {
       "id": "src_app_render",
       "label": "render()",
-      "degree": 22
+      "degree": 27
     },
     {
       "id": "src_app_bindworkspaceevents",
@@ -223,12 +252,12 @@
     {
       "id": "src_app_toast",
       "label": "toast()",
-      "degree": 16
+      "degree": 17
     },
     {
-      "id": "src_app_binddialogevents",
-      "label": "bindDialogEvents()",
-      "degree": 14
+      "id": "src_app_initialize",
+      "label": "initialize()",
+      "degree": 15
     },
     {
       "id": "tsconfig_compileroptions",
@@ -236,60 +265,49 @@
       "degree": 14
     },
     {
+      "id": "src_app_binddialogevents",
+      "label": "bindDialogEvents()",
+      "degree": 14
+    },
+    {
       "id": "src_app_refreshfindings",
       "label": "refreshFindings()",
-      "degree": 12
+      "degree": 13
     },
     {
       "id": "src_checks_runchecks",
       "label": "runChecks()",
-      "degree": 11
+      "degree": 12
     },
     {
       "id": "src_app_schedulesave",
       "label": "scheduleSave()",
-      "degree": 10
+      "degree": 12
     },
     {
-      "id": "src_app_initialize",
-      "label": "initialize()",
+      "id": "src_parser_parsecaptions",
+      "label": "parseCaptions()",
       "degree": 10
-    },
-    {
-      "id": "src_app_currentfinding",
-      "label": "currentFinding()",
-      "degree": 9
     }
   ],
   "surprises": [
+    {
+      "source": "refreshFindings()",
+      "target": "runChecks()",
+      "source_files": [
+        "src/app.ts",
+        "src/checks.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
     {
       "source": "detailView()",
       "target": "formatTimestamp()",
       "source_files": [
         "src/app.ts",
         "src/parser.ts"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
-      "source": "purchaseControls()",
-      "target": "storedLicense()",
-      "source_files": [
-        "src/app.ts",
-        "src/license.ts"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
-      "source": "deleteWorkspace()",
-      "target": "clearState()",
-      "source_files": [
-        "src/app.ts",
-        "src/storage.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
@@ -307,11 +325,22 @@
       "why": "bridges separate communities"
     },
     {
-      "source": "refreshFindings()",
-      "target": "runChecks()",
+      "source": "initialize()",
+      "target": "parseCaptions()",
       "source_files": [
         "src/app.ts",
-        "src/checks.ts"
+        "src/parser.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "resetDemo()",
+      "target": "parseCaptions()",
+      "source_files": [
+        "src/app.ts",
+        "src/parser.ts"
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
