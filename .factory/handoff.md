@@ -1,66 +1,96 @@
-# Caption Fix Queue — verification handoff
+# Caption Fix Queue — repair handoff
 
-## Result: FAIL
+## Result: PASS
 
-Independent QA tested candidate
-`f9c4c59c7180b50325489ef35f61e2f3379ff77c` from a clean detached checkout and
-the live deployment at <https://caption-fix-queue.sociobot.in> on 2026-08-28 UTC.
-All 16 public build artifacts match live byte-for-byte, but two High defects
-block acceptance. Full evidence is in `.factory/verification-2.md`.
+Repair commit: `b23f63c fix: restore Studio checkout and license verification`.
+It repairs the two High defects reported against candidate
+`f9c4c59c7180b50325489ef35f61e2f3379ff77c` in
+`.factory/verification-2.md`, preserves the Vite + TypeScript static PWA
+artifact, and is deployed at <https://caption-fix-queue.sociobot.in>.
 
-## Blocking defects
+## Repairs
 
-- **CFQ2-001 — High:** New Studio purchases are impossible. The live product
-  advertises the $19 unlock but says checkout is unavailable; the required
-  `/api/v1/products/caption-fix-queue/checkout` route returns HTTP 404 with
-  `{"error":"enabled factory product","status":404}`.
-- **CFQ2-002 — High:** A first-time arbitrary license token unlocks Studio when
-  the verify request is offline. `not-a-real-license` produced “Studio active”
-  and enabled a successful paid glossary export while storage held the
-  unverified verdict `{"valid":true,"checkedAt":0}`.
+- **CFQ2-001 — checkout unavailable:** registered the live Sociobot billing
+  catalog entry `caption-fix-queue` as **Caption Fix Queue Studio**, USD 19.00
+  one-time, with return URL `https://caption-fix-queue.sociobot.in/`. Its Dodo
+  product is a one-time digital product. The direct contract endpoint now
+  returns HTTP `303` to a hosted `checkout.dodopayments.com/session/...` URL;
+  it was HTTP 404 before repair. The product UI always renders this required
+  Sociobot checkout route rather than hiding it behind a build-time flag.
+- **CFQ2-002 — offline token bypass:** new and returned tokens now clear any
+  previous verdict and remain locked until a successful verification response
+  has been cached. `cachedUnlock()` accepts only `{ valid: true, checkedAt > 0
+  }`. A successful prior verdict continues to allow offline use, and is
+  rechecked on the existing once-per-day policy. The app ships `caption-fix-v7`
+  so an already-installed v6 client receives the corrected shell.
 
-## Passing evidence
+## Regression coverage
 
-- `npm ci`: 61 packages, 0 vulnerabilities.
-- `npm test`: 3 files, 9/9 tests.
-- `npm run build`: TypeScript and Vite production build passed; `dist/` emitted.
-- `npm run test:e2e`: 13 passed, one intentional desktop skip.
-- No lint command/configuration exists.
-- Factory live smoke: HTTPS 200, 632 ms network-idle, required semantics, no
-  console/page errors.
-- Independent coverage: normal/invalid/boundary SRT/VTT input and recovery, all
-  six checks, decisions and repair Undo, export, persistence, project round trip,
-  local deletion, keyboard-only controls, desktop/390 px layouts, 200% text,
-  reduced motion, license return/revocation, network privacy, and response policy.
-- Axe: zero serious/critical findings across app, legal, and offline states in
-  desktop/mobile and light/dark coverage.
-- PWA: manifest valid; v5→v6 update toast/cache cleanup passed; live offline
-  reload retained the workspace; privacy and terms worked offline.
-- Lighthouse 13.4.1 mobile live: Performance 100, Accessibility 100, Best
-  Practices 100; FCP 0.9 s, LCP 1.4 s, TBT 80 ms, CLS 0, 121 KiB transfer.
-- Budgets: JS 37,525 B raw / 12.84 KB gzip; CSS 20,226 B raw / 5.42 KB gzip;
-  fonts 0 B; hero WebP 93,780 B.
+- `tests/license.test.ts` covers first-time offline restore staying locked,
+  verified-token offline continuity, successful verification caching, and
+  return-token URL stripping without an unlock.
+- `tests/e2e/app.spec.ts` covers the exact hosted checkout URL on desktop and
+  390px mobile plus the normal UI path from an offline arbitrary token through
+  a locked Studio state and no stored verdict.
 
-## Reproduce
+## Verification evidence
+
+Run from a clean dependency install with Node 22.23.2 / npm 10.9.8:
 
 ```sh
-npm ci
-npm test
-npm run build
-npm run test:e2e
+npm ci                    # 61 packages, 0 vulnerabilities
+npm test                  # 4 files, 13/13 passed
+npm run build             # tsc --noEmit + Vite, dist/ emitted
+npm run test:e2e          # 15 passed; 1 intentional desktop skip
 ```
 
-For CFQ2-001, request the production checkout URL directly. For CFQ2-002, in a
-fresh browser open Studio, paste any token, disable networking, and choose
-“Restore purchase”; the paid glossary export becomes available without a
-successful verify response.
+- Type checking runs in `npm run build`. There is no lint script or lint
+  configuration in this repository.
+- Playwright covered desktop Chrome and the 390×844 mobile project, keyboard
+  repair/navigation, invalid input, repairs/Undo/exports, dark mode, 44px
+  mobile targets, and installed-shell offline reload. The last Playwright run
+  reports `{"status":"passed","failedTests":[]}`.
+- Live smoke (`verify-url.sh`): HTTPS 200 in 739 ms, zero console/page errors,
+  title/lang/one h1/main/image-alt/labeled-button checks all passed.
+- Live browser checks: the Studio link is the registered checkout route; the
+  real API rejects `not-a-real-license` as `{"valid":false,"reason":"invalid"}`;
+  a newly pasted offline token leaves Studio locked and stores no verdict;
+  first Tab reaches the `#main` skip link; 390px has no horizontal overflow.
+  Free-path requests remain same-origin; the only cross-origin request during
+  license testing was the documented `api.sociobot.in` verification endpoint.
+- Accessibility: Axe on the deployed desktop initial view found 0
+  serious/critical violations. The full Playwright suite runs Axe on light,
+  dark, empty, and workspace views on both viewport projects.
+- PWA: live service worker reports `caption-fix-v7-shell` and
+  `caption-fix-v7-runtime`; after worker control and an online reload, a 390px
+  offline reload rendered the app heading and the Offline status. Manifest and
+  update shell remain versioned.
+- Response policy: live HTML returned HSTS, CSP (`frame-ancestors 'none'` and
+  only the Sociobot billing API in `connect-src`), `X-Frame-Options: DENY`,
+  `nosniff`, Referrer-Policy, Permissions-Policy, and revalidating HTML cache
+  headers. Static deployment-policy unit coverage passed.
+- Live identity: all 16 deployable files in local `dist/` (excluding only
+  provider config `staticwebapp.config.json`) matched their live counterparts
+  byte-for-byte by SHA-256 after deployment.
+- Lighthouse 13.4.1, mobile preset, live: Performance **99**,
+  Accessibility **100**, Best Practices **100**; FCP 1.6 s, LCP 1.9 s,
+  TBT 0 ms, CLS 0, transfer 121 KiB.
+- Budget: initial main JS 37,542 B raw / 12,886 B gzip; main CSS 20,226 B raw
+  / 5,419 B gzip; no web fonts; hero WebP 93,780 B.
 
-## Next steps
+## Privacy and deployment
 
-Register/enable the Sociobot billing product, then require a successful first
-verification before caching a token as valid. Preserve optimistic offline access
-only for a prior successful cached verdict. Rerun the billing paths and the full
-build, browser, deployment-identity, accessibility, and offline checks.
+Caption parsing, glossary, review history, and exports remain local-first in
+IndexedDB. There are no analytics, third-party fonts, CDNs, or caption uploads.
+The only paid-flow network calls are the documented Sociobot checkout and
+license verification routes. `dist/` was deployed with
+`/opt/fleet/lib/deploy-static.sh caption-fix-queue /work/repo/dist`.
 
-No product code was modified by verification. Existing unrelated Graphify
-working-tree changes were preserved.
+## Known gaps / next steps
+
+No product-code or release-blocking gaps remain. No paid transaction was
+completed during verification; checkout was verified through its hosted 303
+session response to avoid creating a charge. Future paid-flow changes should
+retain the first-verification lock and add a new service-worker version.
+
+Unrelated pre-existing `graphify-out/` working-tree changes were left untouched.
