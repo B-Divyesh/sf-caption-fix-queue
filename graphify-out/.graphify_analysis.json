@@ -260,13 +260,13 @@
       "degree": 15
     },
     {
-      "id": "src_app_binddialogevents",
-      "label": "bindDialogEvents()",
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
       "degree": 14
     },
     {
-      "id": "tsconfig_compileroptions",
-      "label": "compilerOptions",
+      "id": "src_app_binddialogevents",
+      "label": "bindDialogEvents()",
       "degree": 14
     },
     {
