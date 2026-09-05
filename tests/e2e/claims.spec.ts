@@ -81,8 +81,9 @@ test('@claim:local-processing demo content stays in-browser with no third-party 
   expect(await readWorkspace(page, 'demo:caption-fix-queue')).not.toBeNull();
 });
 
-test('@claim:six-checks the sample exposes all six finding kinds with reasons and evidence', async ({ page }) => {
+test('@claim:six-checks the seven-cue sample exposes all six finding kinds with reasons, evidence, and nearby context', async ({ page }) => {
   await page.goto('/?demo=1');
+  await expect(page.locator('.workspace-head')).toContainText('7 cues');
   await expect(page.locator('.finding-row')).toHaveCount(6);
   const labels = await page.locator('.finding-row small').allTextContents();
   for (const label of ['Repeat', 'Blank run', 'Character', 'Reading speed', 'Speaker', 'Glossary']) expect(labels.some((value) => value.includes(label))).toBe(true);
@@ -93,9 +94,12 @@ test('@claim:six-checks the sample exposes all six finding kinds with reasons an
     await expect(page.locator('.explanation span')).not.toBeEmpty();
   }
 
-  await page.locator('.finding-row').filter({ hasText: 'Repeat' }).click();
+  const sampleFindings = page.locator('.finding-row');
+  await sampleFindings.nth(0).click();
   await expect(page.locator('.cue-card.neighbor')).toHaveCount(1);
-  await page.locator('.finding-row').filter({ hasText: 'Reading speed' }).click();
+  await sampleFindings.nth(3).click();
+  await expect(page.locator('.cue-card.neighbor')).toHaveCount(2);
+  await sampleFindings.nth(5).click();
   await expect(page.locator('.cue-card.neighbor')).toHaveCount(2);
 
   const check = (body: string, glossary: Array<{ id: string; preferred: string; variants: string[] }> = []) =>
@@ -157,7 +161,7 @@ test('@claim:offline-demo demo reload, repair, and export work offline after one
   expect(await downloadText(await downloadPromise)).toContain('Welcome to our garden workshop.');
 });
 
-test('@claim:format-roundtrip SRT, WebVTT metadata, and JSON project backups import and export', async ({ page }) => {
+test('@claim:format-roundtrip SRT, WebVTT metadata, and populated JSON project backups import and export', async ({ page, browser }) => {
   await page.goto('/');
   await page.locator('#file-input').setInputFiles({ name: 'roundtrip.srt', mimeType: 'application/x-subrip', buffer: Buffer.from('1\n00:00:01,000 --> 00:00:03,000\nSRT line.\n') });
   let downloadPromise = page.waitForEvent('download');
@@ -167,18 +171,54 @@ test('@claim:format-roundtrip SRT, WebVTT metadata, and JSON project backups imp
   await page.getByRole('button', { name: 'More document actions' }).click();
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Review another file' }).click();
-  const vtt = 'WEBVTT - Workshop\n\nNOTE local note\n\nSTYLE\n::cue { color: white; }\n\nREGION\nid:lower\n\nintro\n00:00:01.000 --> 00:00:03.000 align:start\n<v Mara>Hello</v>\n';
+  const vtt = 'WEBVTT - Workshop\n\nNOTE local note\n\nSTYLE\n::cue { color: white; }\n\nREGION\nid:lower\n\nintro\n00:00:01.000 --> 00:00:03.000 align:start\n<v Mara>Hello hello</v>\n';
   await page.locator('#file-input').setInputFiles({ name: 'roundtrip.vtt', mimeType: 'text/vtt', buffer: Buffer.from(vtt) });
   downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /Export VTT/ }).click();
   const output = await downloadText(await downloadPromise);
-  for (const fragment of ['WEBVTT - Workshop', 'NOTE local note', 'STYLE', 'REGION', 'intro', 'align:start', '<v Mara>Hello</v>']) expect(output).toContain(fragment);
+  for (const fragment of ['WEBVTT - Workshop', 'NOTE local note', 'STYLE', 'REGION', 'intro', 'align:start', '<v Mara>Hello hello</v>']) expect(output).toContain(fragment);
+  await page.locator('#glossary-button').click();
+  await page.getByLabel('Preferred spelling').fill('coriander');
+  await page.getByLabel('Variants to flag').fill('cilantro');
+  await page.getByRole('button', { name: 'Add term' }).click();
+  await expect(page.locator('.glossary-list')).toContainText('coriander');
+  await page.getByRole('button', { name: 'Close glossary' }).click();
+  await page.getByRole('button', { name: /Accept as-is/ }).click();
+  await expect(page.locator('.progress-strip strong').nth(1)).toHaveText('1');
   await page.getByRole('button', { name: 'More document actions' }).click();
   downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export project backup' }).click();
-  const backup = JSON.parse(await downloadText(await downloadPromise)) as { version: number; document: { format: string } };
+  const backupText = await downloadText(await downloadPromise);
+  const backup = JSON.parse(backupText) as { version: number; document: { format: string }; glossary: Array<{ preferred: string }>; statuses: Record<string, string>; history: Array<{ action: string }> };
   expect(backup.version).toBe(1);
   expect(backup.document.format).toBe('vtt');
+  expect(backup.glossary.some((entry) => entry.preferred === 'coriander')).toBe(true);
+  expect(Object.values(backup.statuses)).toContain('accepted');
+  expect(backup.history).toHaveLength(1);
+
+  const restoredContext = await browser.newContext();
+  const restoredPage = await restoredContext.newPage();
+  await restoredPage.route('https://api.sociobot.in/api/v1/products/caption-fix-queue/verify?license=claim-license', (route) => route.fulfill({ json: { valid: true, reason: 'ok' } }));
+  await restoredPage.goto('/');
+  await restoredPage.locator('#file-input').setInputFiles({ name: 'roundtrip.caption-fix.json', mimeType: 'application/json', buffer: Buffer.from(backupText) });
+  await expect(restoredPage.getByRole('heading', { level: 1 })).toContainText('roundtrip.vtt');
+  await expect(restoredPage.locator('.workspace-head')).toContainText('1 cues · VTT');
+  await expect(restoredPage.locator('.progress-strip strong').nth(1)).toHaveText('1');
+  await restoredPage.locator('#glossary-button').click();
+  await expect(restoredPage.locator('.glossary-list')).toContainText('coriander');
+  await restoredPage.getByRole('button', { name: 'Close glossary' }).click();
+  downloadPromise = restoredPage.waitForEvent('download');
+  await restoredPage.locator('#export-button').click();
+  const restoredVtt = await downloadText(await downloadPromise);
+  for (const fragment of ['WEBVTT - Workshop', 'NOTE local note', 'STYLE', 'REGION', 'intro', 'align:start', '<v Mara>Hello hello</v>']) expect(restoredVtt).toContain(fragment);
+  await unlockStudio(restoredPage);
+  await restoredPage.getByRole('button', { name: 'More document actions' }).click();
+  downloadPromise = restoredPage.waitForEvent('download');
+  await restoredPage.getByRole('button', { name: 'Export team history' }).click();
+  const restoredHistory = await downloadText(await downloadPromise);
+  expect(restoredHistory).toContain('"roundtrip.vtt"');
+  expect(restoredHistory).toContain('"accepted"');
+  await restoredContext.close();
 });
 
 test('@claim:local-persistence captions, glossary, decisions, and history persist and can be deleted', async ({ page }) => {
@@ -246,7 +286,12 @@ test('@claim:studio-contract Studio is $19 once for one reviewer and exports lic
   await expect(page.getByText('$19', { exact: true })).toBeVisible();
   await expect(page.getByText(/once · one reviewer license/)).toBeVisible();
   await expect(page.getByRole('link', { name: 'Buy Studio — $19' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/caption-fix-queue/checkout');
-  await expect(page.getByRole('link', { name: 'purchase terms' })).toHaveAttribute('href', '/terms/');
+  await page.getByRole('link', { name: 'purchase terms' }).click();
+  await expect(page).toHaveURL(`${ORIGIN}/terms/`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Terms');
+  await expect(page.getByText('Sociobot/Dodo handles payment and refunds.')).toBeVisible();
+  await page.goto('/?demo=1');
+  await page.getByRole('button', { name: 'View Studio', exact: true }).click();
   await page.getByLabel('Have a license? Paste it here').fill('claim-license');
   await page.getByRole('button', { name: 'Restore purchase' }).click();
   await page.getByRole('button', { name: /Accept as-is/ }).click();
@@ -260,9 +305,10 @@ test('@claim:studio-contract Studio is $19 once for one reviewer and exports lic
   expect(verifyRequests).toBe(1);
 });
 
-test('@claim:review-scope the product identifies itself as a heuristic review aid, not transcription or certification', async ({ page }) => {
+test('@claim:review-scope the product identifies itself as a review aid, not transcription or certification', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Checks are heuristics, not accessibility certification.')).toBeVisible();
+  await expect(page.getByText('These checks can miss problems or flag acceptable text.')).toBeVisible();
+  await expect(page.getByText('They do not certify accessibility.')).toBeVisible();
   await expect(page.getByText('The checker does not create transcripts or host video.')).toBeVisible();
   await expect(page.locator('input[type="video"], input[accept*="video"], video')).toHaveCount(0);
   await page.goto('/?demo=1');

@@ -1,6 +1,6 @@
 # Copy audit
 
-Audited 28 August 2026. Counts treat hyphenated terms as one word. No sentence
+Audited 5 September 2026. Counts treat hyphenated terms as one word. No sentence
 exceeds 22 words, and no banned marketing term appears.
 
 | Route or state | Sentence | Words | Result |
@@ -18,7 +18,8 @@ exceeds 22 words, and no banned marketing term appears.
 | How | See the reason, matching text, and nearby cues. | 8 | Pass |
 | How | Download captions in their original format or save a JSON backup. | 11 | Pass |
 | Limits | Caption text is processed in this browser and is not uploaded. | 10 | Pass |
-| Limits | Checks are heuristics, not accessibility certification. | 6 | Pass |
+| Limits | These checks can miss problems or flag acceptable text. | 10 | Pass |
+| Limits | They do not certify accessibility. | 5 | Pass |
 | Limits | The checker does not create transcripts or host video. | 9 | Pass |
 | Limits | It does not change caption text until you choose a repair. | 11 | Pass |
 | Limits | A final watch-through still needs a person. | 8 | Pass |
@@ -30,7 +31,8 @@ exceeds 22 words, and no banned marketing term appears.
 | Glossary | List a preferred spelling and comma-separated variants. | 7 | Pass |
 | Glossary | Findings update after you save the term. | 7 | Pass |
 | Glossary | Export a glossary, then import it in another browser without an account. | 12 | Pass |
-| Studio dialog | Sociobot/Dodo handles payment and refunds. | 5 | Pass |
+| Studio dialog | Read the purchase terms before buying. | 6 | Pass |
+| Terms | Findings can miss problems or flag acceptable text. | 8 | Pass |
 | Offline | Offline — the caption checker, repairs, and exports still work. | 9 | Pass |
 | 404 | Check the address, open the checker, or try the sample captions. | 11 | Pass |
 

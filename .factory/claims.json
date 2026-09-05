@@ -15,10 +15,10 @@
   },
   {
     "id": "six-checks",
-    "claim": "The checker queues six kinds of possible issue and shows a reason plus matching evidence for each.",
+    "claim": "The sample opens seven cues with six finding kinds, and each finding shows a reason, matching text, and nearby cues.",
     "where": "landing checks section, README",
     "test": "npm run test:claims -- --grep @claim:six-checks",
-    "sandbox": "fresh demo; assert exactly six seeded findings, all six kinds, and non-empty reason/evidence for every finding"
+    "sandbox": "fresh demo; assert seven cues, exactly six seeded findings across all six kinds, non-empty reason/evidence for every finding, and nearby context for first, middle, and last findings"
   },
   {
     "id": "explicit-repairs",
@@ -39,7 +39,7 @@
     "claim": "SRT, WebVTT, and JSON project backups import locally; exports preserve the caption format and WebVTT metadata.",
     "where": "import panel, how it works, README",
     "test": "npm run test:claims -- --grep @claim:format-roundtrip",
-    "sandbox": "fresh browser; round-trip SRT and metadata-rich WebVTT, then parse the exported JSON backup"
+    "sandbox": "fresh browser; round-trip SRT and metadata-rich WebVTT, export a populated JSON backup, import it in a new browser context, and verify the restored document, glossary, decision, history, and VTT output"
   },
   {
     "id": "local-persistence",
@@ -57,10 +57,10 @@
   },
   {
     "id": "studio-contract",
-    "claim": "Studio costs $19 once for one reviewer and adds glossary transfer plus team review-history CSV; core exports stay free.",
+    "claim": "Studio costs $19 once for one reviewer and adds glossary transfer plus team review-history CSV; core exports stay free and purchase terms are available before buying.",
     "where": "landing Studio section, Studio dialog, terms, README",
     "test": "npm run test:claims -- --grep @claim:studio-contract",
-    "sandbox": "fresh demo; verify free caption/project exports, checkout contract, mocked license verification, CSV contents, and 24-hour cache"
+    "sandbox": "fresh demo; verify free caption/project exports, the checkout route, the purchase terms reached from Studio, mocked license verification, CSV contents, and 24-hour cache"
   },
   {
     "id": "review-scope",

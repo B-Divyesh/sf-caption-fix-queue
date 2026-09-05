@@ -168,7 +168,7 @@ function emptyView(): string {
       <ol><li><strong>Import captions</strong><span>Choose an SRT, WebVTT, or JSON project backup.</span></li><li><strong>Review findings</strong><span>See the reason, matching text, and nearby cues.</span></li><li><strong>Export repairs</strong><span>Download captions in their original format or save a JSON backup.</span></li></ol>
     </section>
     <section class="limits-section" aria-labelledby="limits-title">
-      <div><p class="eyebrow">Privacy and limits</p><h2 id="limits-title">Your captions stay under your control</h2><p>Caption text is processed in this browser and is not uploaded. Checks are heuristics, not accessibility certification.</p></div>
+      <div><p class="eyebrow">Privacy and limits</p><h2 id="limits-title">Your captions stay under your control</h2><p>Caption text is processed in this browser and is not uploaded. These checks can miss problems or flag acceptable text. They do not certify accessibility.</p></div>
       <ul><li>The checker does not create transcripts or host video.</li><li>It does not change caption text until you choose a repair.</li><li>A final watch-through still needs a person.</li></ul>
     </section>
     <section class="studio-section" aria-labelledby="studio-section-title">
@@ -266,7 +266,7 @@ function finishedState(): string {
 }
 
 function purchaseControls(): string {
-  return `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio — $19</a><p class="merchant-note">Sociobot/Dodo handles payment and refunds. Read the <a href="/terms/">purchase terms</a>.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
+  return `<a class="primary-button button-link" href="${checkoutUrl()}">Buy Studio — $19</a><p class="merchant-note">Read the <a href="/terms/">purchase terms</a> before buying.</p><hr><label for="license-token">Have a license? Paste it here</label><input id="license-token" value="${escapeHtml(storedLicense())}" autocomplete="off" /><p class="form-error" id="license-error" role="alert"></p><button class="secondary-button" id="restore-license" type="button">Restore purchase</button>`;
 }
 
 function dialogs(): string {

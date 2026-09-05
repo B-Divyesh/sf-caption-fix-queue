@@ -11,8 +11,8 @@ Try the isolated sample at <https://caption-fix-queue.sociobot.in/?demo=1>.
 ## What it does
 
 - Imports SRT, WebVTT, and JSON project backups in the browser.
-- Runs six caption checks and explains each finding with matching text.
-- Shows nearby cues for context.
+- Opens a seven-cue sample with six finding kinds.
+- Shows each finding's reason, matching text, and nearby cues.
 - Lets reviewers repair text, accept it, or dismiss a finding.
 - Saves captions, glossary terms, decisions, and review history in local storage.
 - Exports repaired captions and JSON project backups for free.
@@ -72,8 +72,8 @@ VITE_BILLING_API=https://pilot-api.sociobot.in/api/v1 npm run build
 ## What Caption Fix Queue does not do
 
 It does not create transcripts, host video, synchronize playback, or make
-factual corrections. Its checks are heuristics and may miss problems or flag
-acceptable text. A person makes the final publishing decision.
+factual corrections. Its checks can miss problems or flag acceptable text.
+A person makes the final publishing decision.
 
 The visual rationale and original-image provenance are in
 `.factory/design.md`. Repair evidence is recorded in `.factory/handoff.md`.
