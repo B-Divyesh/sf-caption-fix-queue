@@ -9,9 +9,10 @@ video teams and community educators checking captions before publishing.
 - Implementation commits: `3ac9147acc63ffce920271375061c5462b2d5d9f`
   (backup-import proof and copy/claim repair) and
   `b4cdbd22bf5a3d9200bc0a16e78050fcc86ce7f1` (landing skip-link focus).
-- The documentation handoff is committed after this file; its SHA is reported
-  with the delivery commit so implementation and documentation revisions remain
-  distinguishable.
+- Documentation evidence commit:
+  `9fb4fdc81e548b1199663a2d09489136b66c6c16` (the first committed version of
+  this handoff, before this SHA annotation). It is separate from the deployed
+  implementation commits above.
 - Final static deployment: `dc190496-2750-49ca-8a32-9a7740def83a`, succeeded
   on 2026-09-05 UTC. The live custom domain returned HTTPS 200 after deploy.
 
