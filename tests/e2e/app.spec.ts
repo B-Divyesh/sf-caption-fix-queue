@@ -27,6 +27,14 @@ test('sample runs through repair and export without serious accessibility issues
   expect(errors).toEqual([]);
 });
 
+test('a fresh landing page starts keyboard navigation at the skip link', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('.skip-link')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#main$/);
+});
+
 test('invalid paste explains how to recover', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Paste captions' }).click();

@@ -575,9 +575,11 @@ async function initialize(): Promise<void> {
       refreshFindings(); scheduleSave();
     }
   }
-  refreshFindings(); routeShouldFocus = true; render();
+  // A fresh landing page should start at the document so its skip link is the
+  // first keyboard stop. Routed demo and 404 pages still announce their h1.
+  refreshFindings(); routeShouldFocus = isDemo || isNotFound; render();
   window.addEventListener('keydown', onKeyboard);
-  window.addEventListener('pageshow', () => focusRoute());
+  window.addEventListener('pageshow', (event) => { if (event.persisted) focusRoute(); });
   window.addEventListener('online', () => { document.querySelector<HTMLElement>('#offline-banner')?.setAttribute('hidden', ''); void verifyInBackground(); });
   window.addEventListener('offline', () => document.querySelector<HTMLElement>('#offline-banner')?.removeAttribute('hidden'));
   void registerServiceWorker(); void verifyInBackground();
